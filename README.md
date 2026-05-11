@@ -11,7 +11,7 @@ YouTube字幕からAnki用カードを自動生成するツール
 
 ### ディレクトリ構成
 - app.py          # アプリのメインプログラム（Flask/DB設定・ルーティング）
-- models.py       # データベースのテーブル定義（Video, Subtitle）
+- models.py       # データベースのテーブル定義（Video, Subtitle, AICards）
 - functions.py    # YouTube APIや字幕処理などのロジック（予定）
 - data.sqlite     # 生成されたデータベースファイル
 - migrations/     # DBの変更履歴（Flask-Migrateが生成）
