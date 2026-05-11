@@ -1,0 +1,2 @@
+# AnkiTube
+YouTube字幕からAnki用カードを自動生成するツール
