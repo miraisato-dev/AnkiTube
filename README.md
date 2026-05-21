@@ -20,3 +20,15 @@ YouTube字幕からAnki用カードを自動生成するツール
 - templates/      # HTMLファイル
 - static/         # CSS/JSファイル
 
+### GIF
+home画面
+<img width="1080" height="608" alt="edit_gif" src="https://github.com/user-attachments/assets/d18738e4-06c9-4ebd-a4f7-aa1ddeec1e23" />
+
+
+editor画面とoutput画面
+<img width="1080" height="608" alt="edit_gif" src="https://github.com/user-attachments/assets/e5694dcd-b11e-4308-8268-ab42fe21b954" />
+
+
+history画面
+<img width="1080" height="608" alt="home_gif" src="https://github.com/user-attachments/assets/4a5d2060-8c27-4110-871a-002a25c7a443" />
+
