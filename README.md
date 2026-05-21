@@ -21,11 +21,8 @@ YouTube字幕からAnki用カードを自動生成するツール
 - **Database**: SQLite (SQLAlchemy / Flask-Migrate)
 - **Frontend**: HTML, TailwindCSS, JavaScript (Templates)
 
-### このアプリを動かすための最初のコマンド
-## 🚀 はじめに（セットアップ）
-
+### このアプリを動かすためのコマンド
 ### 1. リポジトリのクローンと準備
-```bash
 git clone [https://github.com/あなたのユーザー名/AnkiTube.git](https://github.com/あなたのユーザー名/AnkiTube.git)
 cd AnkiTube
 # 必要に応じて仮想環境の作成やライブラリのインストール手順をここに記載
