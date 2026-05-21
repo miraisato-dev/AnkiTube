@@ -1,0 +1,104 @@
+<!-- templates/macros/_card.html -->
+{% macro anki_card(card) %}
+<!-- 
+    Ankiカードコンポーネント
+    引数: card (id, subtitle_id, expression, answer, pronunciation, meaning, synonyms, note を持つ辞書)
+-->
+<div class="card-root bg-surface-container-lowest p-md rounded-xl shadow-sm border border-surface-container-high flex gap-md relative hover:shadow-md transition-shadow group" 
+    data-card-id="{{ card.id }}" 
+    data-subtitle-id="{{ card.subtitle_id }}">
+
+    <!-- =======================================================
+        【閲覧モード】(view-mode)
+        ======================================================= -->
+    <div class="flex-grow view-mode">
+        <!-- 表面 (Front) -->
+        <div class="mb-md">
+            <span class="font-label-md text-label-md text-secondary bg-secondary-fixed px-2 py-0.5 rounded uppercase">Question (Front)</span>
+            <div class="display-expression font-body-lg text-body-lg mt-2 text-on-surface leading-relaxed">
+                {{ card.expression }}
+            </div>
+            
+            <div class="display-meaning font-body-md text-on-surface leading-relaxed">
+                <strong>意味:</strong> <span class="meaning-text">{{ card.meaning }}</span>
+            </div>
+        </div>
+        
+        <hr class="border-surface-container-high my-md">
+        
+        <!-- 裏面 (Back) -->
+        <div class="mb-sm space-y-sm">
+            <span class="font-label-md text-label-md text-tertiary-container bg-tertiary-fixed px-2 py-0.5 rounded uppercase">Answer (Back)</span>
+            
+            <div class="display-answer font-body-lg font-bold mt-2 text-primary">
+                正解: <span class="answer-text">{{ card.answer }}</span> 
+                <span class="pronunciation text-outline font-normal text-sm ml-2 {% if not card.pronunciation %}hidden{% endif %}">
+                    {{ card.pronunciation }}
+                </span>
+            </div>
+
+            <div class="display-synonyms font-body-sm text-outline {% if not card.synonyms %}hidden{% endif %}">
+                <strong>類義語:</strong> <span class="synonyms-text">{{ card.synonyms }}</span>
+            </div>
+
+            <div class="display-note bg-surface-container-low p-sm rounded-lg border border-surface-container-high font-body-sm text-on-surface-variant leading-relaxed">
+                <strong>解説:</strong> <span class="note-text">{{ card.note }}</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- =======================================================
+        【編集モード】(edit-mode)
+        ======================================================= -->
+    <div class="flex-grow edit-mode hidden space-y-sm pr-12">
+        <div>
+            <label class="block text-xs font-bold text-outline mb-1">Front / 問題文 (expression)</label>
+            <textarea class="card-input-expression w-full p-sm bg-surface-container rounded-lg border border-outline focus:outline-primary font-body-md" rows="2" data-original="{{ card.expression }}">{{ card.expression }}</textarea>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-sm">
+            <div>
+                <label class="block text-xs font-bold text-outline mb-1">正解 (answer)</label>
+                <input type="text" class="card-input-answer w-full p-xs bg-surface-container rounded-lg border border-outline focus:outline-primary font-body-md" data-original="{{ card.answer }}" value="{{ card.answer }}">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-outline mb-1">発音記号 (pronunciation)</label>
+                <input type="text" class="card-input-pronunciation w-full p-xs bg-surface-container rounded-lg border border-outline focus:outline-primary font-mono text-sm" data-original="{{ card.pronunciation }}" value="{{ card.pronunciation }}">
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-outline mb-1">日本語訳 (meaning)</label>
+            <textarea class="card-input-meaning w-full p-sm bg-surface-container rounded-lg border border-outline focus:outline-primary font-body-md" rows="2" data-original="{{ card.meaning }}">{{ card.meaning }}</textarea>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-outline mb-1">類義語 (synonyms)</label>
+            <input type="text" class="card-input-synonyms w-full p-xs bg-surface-container rounded-lg border border-outline focus:outline-primary font-body-md" data-original="{{ card.synonyms }}" value="{{ card.synonyms }}">
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-outline mb-1">教師からの解説 (note)</label>
+            <textarea class="card-input-note w-full p-sm bg-surface-container rounded-lg border border-outline focus:outline-primary font-body-md" rows="3" data-original="{{ card.note }}">{{ card.note }}</textarea>
+        </div>
+
+        <div class="flex gap-sm justify-end pt-xs">
+            <button class="cancel-edit-btn font-label-md text-outline hover:text-on-surface px-3 py-1.5 rounded-full hover:bg-surface-container transition-all">キャンセル</button>
+            <button class="save-card-btn font-label-md bg-primary text-on-primary px-4 py-1.5 rounded-full hover:shadow transition-all">保存</button>
+        </div>
+    </div>
+
+    <!-- =======================================================
+        【操作ボタン】(編集・削除)
+        ======================================================= -->
+    <div class="absolute top-4 right-4 flex flex-row gap-2 items-center">
+        <button class="toggle-edit-btn text-outline hover:text-primary p-2 rounded-full hover:bg-surface-container opacity-0 group-hover:opacity-100 transition-all duration-200" title="カードを編集">
+            <span class="material-symbols-outlined" data-icon="edit_note">edit_note</span>
+        </button>
+        
+        <button class="delete-card-btn text-outline hover:text-error p-2 rounded-full hover:bg-surface-container opacity-0 group-hover:opacity-100 transition-all duration-200" title="カードを削除">
+            <span class="material-symbols-outlined" data-icon="delete">delete</span>
+        </button>
+    </div>
+</div>
+{% endmacro %}

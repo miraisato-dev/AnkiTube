@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ja">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>AnkiTube - YouTubeを英語学習の教材に</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#d9dadc",
+                        "tertiary-fixed": "#adecff",
+                        "tertiary-container": "#006476",
+                        "outline-variant": "#c3c6d6",
+                        "on-primary-container": "#c4d2ff",
+                        "on-surface-variant": "#434654",
+                        "surface-variant": "#e1e2e4",
+                        "primary-container": "#0052cc",
+                        "inverse-on-surface": "#f0f1f3",
+                        "background": "#f8f9fb",
+                        "surface-bright": "#f8f9fb",
+                        "on-primary-fixed": "#001848",
+                        "inverse-primary": "#b2c5ff",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-low": "#f3f4f6",
+                        "error": "#ba1a1a",
+                        "secondary-fixed-dim": "#ffba20",
+                        "secondary-fixed": "#ffdea8",
+                        "on-primary-fixed-variant": "#0040a2",
+                        "on-tertiary": "#ffffff",
+                        "outline": "#737685",
+                        "on-tertiary-fixed-variant": "#004e5d",
+                        "secondary-container": "#feb700",
+                        "secondary": "#7c5800",
+                        "on-tertiary-container": "#70e2ff",
+                        "on-secondary": "#ffffff",
+                        "surface-container-high": "#e7e8ea",
+                        "primary-fixed": "#dae2ff",
+                        "surface": "#f8f9fb",
+                        "error-container": "#ffdad6",
+                        "on-error": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "on-secondary-fixed": "#271900",
+                        "on-surface": "#191c1e",
+                        "tertiary-fixed-dim": "#5dd6f3",
+                        "on-tertiary-fixed": "#001f26",
+                        "on-secondary-container": "#6b4b00",
+                        "primary-fixed-dim": "#b2c5ff",
+                        "surface-tint": "#0c56d0",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#5e4200",
+                        "surface-container-highest": "#e1e2e4",
+                        "inverse-surface": "#2e3132",
+                        "tertiary": "#004b58",
+                        "surface-container": "#edeef0",
+                        "primary": "#003d9b",
+                        "on-background": "#191c1e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "12px",
+                        "gutter": "24px",
+                        "lg": "48px",
+                        "md": "24px",
+                        "xs": "4px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "64px",
+                        "xl": "80px",
+                        "base": "8px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "headline-sm": ["Plus Jakarta Sans"],
+                        "headline-xl-mobile": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "headline-xl": ["Plus Jakarta Sans"],
+                        "label-md": ["Plus Jakarta Sans"],
+                        "body-sm": ["Plus Jakarta Sans"],
+                        "body-md": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "label-lg": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-xl-mobile": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-xl": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600" }]
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .hero-gradient {
+            background: linear-gradient(180deg, rgba(248, 249, 251, 0) 0%, #f8f9fb 100%);
+        }
+
+        .air-light-card {
+            box-shadow: 0 10px 30px -10px rgba(12, 86, 208, 0.12);
+        }
+    </style>
+    <style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+
+
+<body
+    class="bg-background text-on-surface font-body-md selection:bg-primary-container selection:text-on-primary-container">
+
+    <!-- TopAppBar -->
+    <header
+        class="bg-surface dark:bg-surface-container shadow-sm w-full top-0 sticky flex justify-between items-center px-margin-mobile md:px-margin-desktop h-16 w-full z-50">
+        <a href="{{ url_for('home') }}"
+            class="flex items-center gap-sm cursor-pointer active:opacity-80 transition-opacity">
+            <span class="material-symbols-outlined text-primary dark:text-inverse-primary"
+                data-icon="language">language</span>
+            <h1
+                class="font-headline-md text-headline-md-mobile md:text-headline-md text-primary dark:text-inverse-primary tracking-tight">
+                AnkiTube</h1>
+        </a>
+        <div class="flex items-center gap-gutter">
+
+            <nav class="hidden md:flex gap-md items-center">
+
+                <!-- home -->
+                <a class="transition-colors font-label-lg text-label-lg px-2 py-1 
+                {% if request.endpoint == 'home' %}
+                    text-primary dark:text-inverse-primary border-b-2 border-primary
+                {% else %}
+                    text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-tertiary-fixed
+                {% endif %}" href="{{ url_for('home') if request.endpoint != 'home' else '#' }}">
+                    Home
+                </a>
+
+                <!-- history -->
+                <a class="transition-colors font-label-lg text-label-lg px-2 py-1 
+                {% if request.endpoint == 'history' %}
+                    text-primary dark:text-inverse-primary border-b-2 border-primary
+                {% else %}
+                    text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-tertiary-fixed
+                {% endif %}" href="{{ url_for('history') if request.endpoint != 'history' else '#' }}">
+                    History
+                </a>
+
+                <!-- セッションに動画IDがある時だけ、Editorを表示する -->
+                {% if session.get('current_video_id') %}
+                <a class="transition-colors font-label-lg text-label-lg px-2 py-1 
+                    {% if request.endpoint == 'editor' %}
+                        text-primary dark:text-inverse-primary border-b-2 border-primary
+                    {% else %}
+                        text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-tertiary-fixed
+                    {% endif %}"
+                    href="{{ url_for('editor', video_id=session['current_video_id']) if request.endpoint != 'editor' else '#' }}">
+                    Editor
+                </a>
+                {% endif %}
+
+                <!-- output -->
+                <a class="transition-colors font-label-lg text-label-lg px-2 py-1 
+                {% if request.endpoint == 'output' %}
+                    text-primary dark:text-inverse-primary border-b-2 border-primary
+                {% else %}
+                    text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-tertiary-fixed
+                {% endif %}" href="{{ url_for('output') if request.endpoint != 'output' else '#' }}">
+                    Output
+                </a>
+
+            </nav>
+
+            <div
+                class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden cursor-pointer">
+                <img alt="User Avatar" class="w-full h-full object-cover"
+                    data-alt="A professional headshot avatar of a young male with short brown hair and a friendly smile, styled in a minimalist vector art fashion. The background is a soft blue that matches the primary brand colors of the educational platform. The lighting is clean and high-key, suitable for a sophisticated modern UI."
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDApIA4tXHZeBJuNaqsCjQQf66vOxNhRyGPMevaNyjucw2JRPG0ktgppa2QTuJvB_JVGqHldjnjulYgtR-BB96ZkVlaRwdKj_NfPDRiqmzfDQeD-30DOWzZ7_h-MB20StDGUMI26QWoaPFc0r_lmtgOMHGit48FR2L6noD0KwdWsFtc7nR_zNT7EgHZ3C6jOyGF0dtJLEm7UgISxkpyF1xp2zdS1u3VIBn2y5NpGoOVw8wZuSnUwk6n-jV4P8Bqry6e4vcii-vOLWE" />
+            </div>
+        </div>
+    </header>
+
+
+    <main>
+
+        {% block content %}{% endblock %}
+
+    </main>
+
+    <!-- BottomNavBar (Mobile Only) -->
+    <nav
+        class="fixed bottom-0 left-0 w-full flex justify-around items-center py-2 px-4 md:hidden bg-surface-container-lowest dark:bg-surface-container-high shadow-[0_-2px_10px_rgba(0,0,0,0.05)] z-50">
+
+        <!-- home -->
+        <a class="flex flex-col items-center justify-center px-4 py-1 active:scale-95 duration-200 transition-all 
+        {% if request.endpoint == 'home' %}
+            bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-full
+        {% else %}
+            text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant dark:hover:bg-inverse-surface
+        {% endif %}" href="{{ url_for('home') if request.endpoint != 'home' else '#' }}">
+
+            <span class="material-symbols-outlined" data-icon="home">
+                home
+            </span>
+            <span class="font-label-md text-label-md">Home</span>
+        </a>
+
+        <!-- History -->
+        <a class="flex flex-col items-center justify-center px-4 py-1 active:scale-95 duration-200 transition-all 
+        {% if request.endpoint == 'history' %}
+            bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-full
+        {% else %}
+            text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant dark:hover:bg-inverse-surface
+        {% endif %}" href="{{ url_for('history') if request.endpoint != 'history' else '#' }}">
+
+            <span class="material-symbols-outlined" data-icon="history">
+                history
+            </span>
+            <span class="font-label-md text-label-md">History</span>
+        </a>
+
+        <!-- editor -->
+        {% if session.get('current_video_id') %}
+        <a class="flex flex-col items-center justify-center px-4 py-1 active:scale-95 duration-200 transition-all 
+            {% if request.endpoint == 'editor' %}
+                bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-full
+            {% else %}
+                text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant dark:hover:bg-inverse-surface
+            {% endif %}"
+            href="{{ url_for('editor', video_id=session['current_video_id']) if request.endpoint != 'editor' else '#' }}">
+
+            <span class="material-symbols-outlined" data-icon="edit_note">
+                edit_note
+            </span>
+            <span class="font-label-md text-label-md">Editor</span>
+        </a>
+        {% endif %}
+
+        <!-- output -->
+        <a class="flex flex-col items-center justify-center px-4 py-1 active:scale-95 duration-200 transition-all 
+        {% if request.endpoint == 'output' %}
+            bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-full
+        {% else %}
+            text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant dark:hover:bg-inverse-surface
+        {% endif %}" href="{{ url_for('output') if request.endpoint != 'output' else '#' }}">
+
+            <span class="material-symbols-outlined" data-icon="auto_awesome">
+                auto_awesome
+            </span>
+            <span class="font-label-md text-label-md">Output</span>
+        </a>
+    </nav>
+
+    <!-- Floating Action Button (FAB) - Home Context Specific -->
+    {% block fab %}
+    <button
+        class="fixed bottom-24 right-6 md:bottom-10 md:right-10 w-14 h-14 rounded-full bg-primary text-on-primary shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all md:hidden">
+        <span class="material-symbols-outlined" data-icon="add">add</span>
+    </button>
+    {% endblock %}
+
+    <footer class="bg-surface-container pb-32 md:pb-12 pt-lg px-margin-mobile md:px-margin-desktop mt-xl">
+        <div class="max-w-screen-xl mx-auto flex flex-col md:flex-row justify-between items-start gap-lg">
+            <div class="max-w-sm">
+                <div class="flex items-center gap-xs mb-sm">
+                    <span class="material-symbols-outlined text-primary" data-icon="language">language</span>
+                    <span class="font-headline-sm text-headline-sm text-primary tracking-tight">AnkiTube</span>
+                </div>
+                <p class="font-body-sm text-body-sm text-on-surface-variant">
+                    Designing the future of global communication through data-driven learning tools.
+                    Made for the ambitious nomad.
+                </p>
+            </div>
+            <div class="grid grid-cols-2 gap-xl">
+                <div class="flex flex-col gap-sm">
+                    <h5 class="font-label-lg text-label-lg text-on-surface">Product</h5>
+                    <a class="text-body-sm text-on-surface-variant hover:text-primary" href="#">Editor</a>
+                    <a class="text-body-sm text-on-surface-variant hover:text-primary" href="#">Templates</a>
+                    <a class="text-body-sm text-on-surface-variant hover:text-primary" href="#">Pricing</a>
+                </div>
+                <div class="flex flex-col gap-sm">
+                    <h5 class="font-label-lg text-label-lg text-on-surface">Support</h5>
+                    <a class="text-body-sm text-on-surface-variant hover:text-primary" href="#">Help Center</a>
+                    <a class="text-body-sm text-on-surface-variant hover:text-primary" href="#">Terms</a>
+                    <a class="text-body-sm text-on-surface-variant hover:text-primary" href="#">Privacy</a>
+                </div>
+            </div>
+        </div>
+        <div
+            class="max-w-screen-xl mx-auto pt-lg mt-lg border-t border-outline-variant flex justify-between items-center">
+            <span class="font-label-md text-label-md text-outline">© 2026 Mirai Sato</span>
+            <div class="flex gap-md">
+                <span class="material-symbols-outlined text-outline cursor-pointer hover:text-primary"
+                    data-icon="language">language</span>
+                <span class="material-symbols-outlined text-outline cursor-pointer hover:text-primary"
+                    data-icon="travel_explore">travel_explore</span>
+            </div>
+        </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

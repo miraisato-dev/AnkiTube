@@ -1,0 +1,103 @@
+<!-- templates/home.html -->
+{% extends "base.html" %}
+
+{% block title %}Home - AnkiTube{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="relative pt-xl pb-lg overflow-hidden">
+    <!-- Travel-themed background illustration (Decorative) -->
+    <div class="absolute top-0 right-0 -z-10 opacity-10 pointer-events-none">
+        <span class="material-symbols-outlined text-[400px] text-primary"
+            style="font-variation-settings: 'wght' 100;">public</span>
+    </div>
+    <div class="max-w-screen-xl mx-auto px-margin-mobile md:px-margin-desktop flex flex-col items-center text-center">
+        <div
+            class="inline-flex items-center gap-xs px-4 py-1.5 rounded-full bg-primary-fixed text-on-primary-fixed mb-md">
+            <span class="material-symbols-outlined text-[18px]" data-icon="flight_takeoff">flight_takeoff</span>
+            <span class="font-label-md text-label-md">Ready for your global journey?</span>
+        </div>
+        <h2
+            class="font-headline-xl-mobile md:font-headline-xl text-headline-xl-mobile md:text-headline-xl text-on-surface mb-sm max-w-3xl">
+            Turn YouTube into your personal English tutor.
+        </h2>
+        <p class="font-body-lg text-body-lg text-on-surface-variant mb-xl max-w-2xl">
+            YouTube動画からワンクリックでAnkiカードを作成。
+            グローバルに活躍するための、語学学習ツール。
+        </p>
+        <form action="{{ url_for('get_subtitles') }}" method="POST"
+            class="w-full max-w-2xl bg-surface-container-lowest air-light-card rounded-xl p-2 flex flex-col md:flex-row gap-sm items-stretch border border-surface-container-high">
+            <div class="flex-1 flex items-center px-4 gap-sm rounded-xl p-2 border border-surface-container-high">
+                <span class="material-symbols-outlined text-outline" data-icon="link">link</span>
+                <!-- name="youtube_url" を追加 -->
+                <input name="youtube_url" required
+                    class="w-full border-none focus:ring-0 bg-transparent font-body-md text-body-md placeholder:text-outline py-3"
+                    placeholder="https://www.youtube.com/watch?v=..." type="text" />
+            </div>
+            <button type="submit"
+                class="bg-primary text-on-primary font-label-lg text-label-lg px-8 py-3 rounded-lg hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-sm">
+                Get Subtitles
+                <span class="material-symbols-outlined text-[20px]" data-icon="auto_awesome">auto_awesome</span>
+            </button>
+        </form>
+    </div>
+</section>
+<!-- Feature Highlights (Bento-style Grid) -->
+<section class="py-lg px-margin-mobile md:px-margin-desktop max-w-screen-xl mx-auto">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+        <!-- AI Analysis -->
+        <div
+            class="bg-surface-container-lowest border border-surface-variant p-gutter rounded-xl air-light-card group hover:border-primary transition-colors">
+            <div
+                class="w-12 h-12 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center mb-md group-hover:scale-110 transition-transform">
+                <span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+            </div>
+            <h3 class="font-headline-sm text-headline-sm mb-xs">AI Analysis</h3>
+            <p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                最新のAIが動画の内容を解析。学習に最適な重要表現やイディオムを自動的に抽出します。
+            </p>
+        </div>
+        <!-- Smart Selection -->
+        <div
+            class="bg-surface-container-lowest border border-surface-variant p-gutter rounded-xl air-light-card group hover:border-primary transition-colors">
+            <div
+                class="w-12 h-12 rounded-lg bg-secondary-container text-on-secondary-container flex items-center justify-center mb-md group-hover:scale-110 transition-transform">
+                <span class="material-symbols-outlined" data-icon="auto_awesome_motion">auto_awesome_motion</span>
+            </div>
+            <h3 class="font-headline-sm text-headline-sm mb-xs">Smart Selection</h3>
+            <p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                文脈に基づいた例文と日本語訳を瞬時に生成。あなたのレベルに合わせたカードを選別できます。
+            </p>
+        </div>
+        <!-- One-click Export -->
+        <div
+            class="bg-surface-container-lowest border border-surface-variant p-gutter rounded-xl air-light-card group hover:border-primary transition-colors">
+            <div
+                class="w-12 h-12 rounded-lg bg-tertiary-fixed text-on-tertiary-fixed flex items-center justify-center mb-md group-hover:scale-110 transition-transform">
+                <span class="material-symbols-outlined" data-icon="ios_share">ios_share</span>
+            </div>
+            <h3 class="font-headline-sm text-headline-sm mb-xs">One-click Export</h3>
+            <p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                Ankiデッキへ直接エクスポート。スマホでの移動時間も無駄にしない効率的な学習環境を提供します。
+            </p>
+        </div>
+    </div>
+</section>
+<!-- Visual Context / Illustration Area -->
+<section class="py-xl overflow-hidden">
+    <div class="max-w-screen-xl mx-auto px-margin-mobile md:px-margin-desktop">
+        <div
+            class="relative w-full aspect-[21/9] rounded-2xl overflow-hidden air-light-card border border-surface-container-high">
+            <img class="w-full h-full object-cover grayscale-[0.3]"
+                data-alt="A wide-angle, high-resolution shot of a group of diverse young professionals studying together in a brightly lit, modern co-working space in London. The architecture is sleek with large glass windows showing a hint of the city skyline. The lighting is natural and airy, maintaining the soft slate and primary blue tones of the brand. The atmosphere is collaborative, focused, and intellectually stimulating."
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCd6ptGfIYnHZMGMgEyKORh1JFsnCmMM5z622m773VWRWjt-NRGNlqvY_rDojxXgbxj-gu4jouXIj9mnwnO7uLoUKbaQk4rbxyykTF7JAz5AfZ0XJJI0XHYZaX8KZX3yetckL7YE_k57ppEGhziCWWVHXJ9zuu2x08wkaRQIrBDsF0XkANYU8As-tghn8-Tw8RcEkJCIHf_qebdEgjvGS-o0Kc1VEjzARs9UIagPuiqHfzccXORxRYljeAhq9z0dpf3XAAsM1x2lcc" />
+            <div class="absolute inset-0 bg-gradient-to-r from-primary/60 to-transparent flex items-center px-lg">
+                <div class="text-white max-w-md">
+                    <h4 class="font-headline-lg text-headline-lg mb-sm">Beyond Borders.</h4>
+                    <p class="font-body-md text-body-md opacity-90">語学はツールの先にある未来。AnkiTubeは、あなたの世界を広げるための最短距離を提供します。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

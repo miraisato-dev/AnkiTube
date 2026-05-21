@@ -1,0 +1,121 @@
+<!-- templates/history.html -->
+{% extends "base.html" %}
+
+{% block title %}Home - AnkiTube{% endblock %}
+
+{% block content %}
+
+<!-- mainの役割（幅制限と、レスポンシブな上下左右の余白を確実に適用） -->
+<div class="max-w-[1280px] mx-auto px-[16px] md:px-[64px] py-[48px]">
+
+    <!-- <div class="mb-lg">
+        <div class="flex items-center gap-xs text-on-surface-variant mb-base">
+            <span class="font-label-md text-label-md">Dashboard</span>
+            <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+            <span class="font-label-md text-label-md text-primary">Recently Viewed</span>
+        </div>
+
+        <h2
+            class="font-headline-xl-mobile md:font-headline-xl text-headline-xl-mobile md:text-headline-xl text-on-surface tracking-tight">
+            History</h2>
+        <p class="font-body-md text-body-md text-on-surface-variant mt-xs max-w-2xl">
+            Continue your progress on previously watched lessons. All flashcards and annotations are saved
+            automatically.
+        </p>
+    </div> -->
+    <!-- History Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md lg:gap-gutter">
+        <!-- Video Card 1 -->
+        {% for video in videos %}
+        {% set card_count = namespace(total=0) %}
+        {% for subtitle in video.subtitles %}
+        {% set card_count.total = card_count.total + subtitle.ai_cards|length %}
+        {% endfor %}
+
+        <div class="group bg-surface-container-lowest rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer flex flex-col overflow-hidden border border-surface-container-high/50
+            {% if loop.index > 6 %}hidden{% endif %}">
+            <div class="relative aspect-video overflow-hidden">
+                <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    alt="{{ video.title }}" src="https://img.youtube.com/vi/{{ video.video_id }}/maxresdefault.jpg"
+                    onerror="this.src='https://img.youtube.com/vi/{{ video.video_id }}/hqdefault.jpg'" />
+                <div
+                    class="absolute bottom-2 right-2 bg-on-background/80 text-white px-2 py-0.5 rounded font-label-md text-label-md">
+                    12:45</div>
+                <div
+                    class="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <span class="material-symbols-outlined text-white text-5xl" data-weight="fill">play_circle</span>
+                </div>
+            </div>
+            <div class="p-md flex flex-col flex-grow">
+                <div class="flex justify-between items-start mb-base">
+                    <span
+                        class="bg-primary-fixed text-on-primary-fixed px-3 py-1 rounded-full font-label-md text-label-md uppercase tracking-wider">Intermediate</span>
+                    <span class="text-on-surface-variant font-label-md text-label-md">
+                        {{ video.created_at.strftime('%b %d, %Y') }}
+                    </span>
+                </div>
+                <h3
+                    class="font-headline-sm text-headline-sm text-on-surface mb-base group-hover:text-primary transition-colors line-clamp-2">
+                    {{ video.title }}</h3>
+                <div class="mt-auto pt-md flex items-center justify-between">
+                    <div class="flex items-center gap-xs text-on-surface-variant">
+                        <span class="material-symbols-outlined text-[18px]">description</span>
+                        <span class="font-label-md text-label-md">
+                            {% if card_count.total > 0 %}
+                            {{ card_count.total }} Flashcard{{ 's' if card_count.total != 1 }}
+                            {% else %}
+                            No Flashcards
+                            {% endif %}
+                        </span>
+                    </div>
+                    <!-- <button
+                        class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-lg text-label-lg hover:bg-primary-container active:scale-95 transition-all">Resume
+                        Editing</button> -->
+                    <a href="/editor/{{ video.video_id }}"
+                        class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-lg text-label-lg hover:bg-primary-container active:scale-95 transition-all">
+                        Resume Editing
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination / Load More -->
+    <div class="mt-xl flex flex-col items-center gap-md">
+        {% set showing = videos | length %}
+        {% if videos | length > 6 %}
+        <button id="load-more-btn" onclick="loadMore()"
+            class="flex items-center gap-base px-lg py-md border border-outline-variant text-primary font-label-lg text-label-lg rounded-full hover:bg-surface-container transition-colors active:scale-95">
+            Load Older History
+            <span class="material-symbols-outlined">expand_more</span>
+        </button>
+        {% endif %}
+        <p id="showing-count" class="font-body-sm text-body-sm text-outline">
+            {% if videos | length > 6 %}6{% else %}{{ videos | length }}{% endif %}
+            of {{ videos | length }} recently viewed videos
+        </p>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function loadMore() {
+        const hidden = document.querySelectorAll('.grid .hidden');
+        hidden.forEach((el, i) => {
+            el.classList.remove('hidden');
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(16px)';
+            el.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+            setTimeout(() => {
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0)';
+            }, i * 100);
+        });
+        document.getElementById('load-more-btn').remove();
+        document.getElementById('showing-count').remove();
+    }
+</script>
+{% endblock %}

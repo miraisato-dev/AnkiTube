@@ -1,0 +1,313 @@
+<!-- templates/edit.html -->
+{% extends "base.html" %}
+
+{% block title %}Home - AnkiTube{% endblock %}
+
+{% block content %}
+<div class="flex-1 flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden relative">
+    <!-- Video Section -->
+    <section class="w-full md:w-[60%] lg:w-[65%] bg-black flex flex-col">
+        <div class="relative w-full aspect-video bg-surface-dim flex items-center justify-center group overflow-hidden">
+            <!-- <img class="absolute inset-0 w-full h-full object-cover opacity-60" data-alt="A cinematic wide shot of a bustling Tokyo street at twilight, with vibrant neon signs reflecting on wet asphalt. The atmosphere is professional yet energetic, featuring a shallow depth of field focusing on a sleek digital interface overlay. The lighting is sophisticated, with deep primary blues and warm gold accents from the street lights." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEFk3x5-4gfEWM8cmQJOvmyVsSlQ5L4MhM4WXOrrjJv7DNbSJ966Q-8FYfOqs1HkPaWqK0SbeJR47WJeG-EvI5xJq32_PjDGCh3te-J571jhu-VRYJbPiHECDPplUKppHG2uKhzP6DpnnAa5QcqZYUPuojFjb2cRXUyVHsi3HxyWxjceL1rHh9WBc8NKzpyBfHxidK9UgnqYA3UlWLhkHcBX_WCop342CF-KnEKmv6mxFrP69eDYaHBN3X9qm33C1hBvBRGBWAtRY"/> -->
+
+            <iframe id="youtube-player" class="absolute inset-0 w-full h-full"
+                src="https://www.youtube.com/embed/{{ video_id }}?enablejsapi=1" title="YouTube video player"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerpolicy="strict-origin-when-cross-origin" allowfullscreen>
+            </iframe>
+        </div>
+
+        <!-- Video Info & Meta (Desktop only scrollable if needed) -->
+        <div class="p-md bg-surface border-r border-outline-variant hidden md:block overflow-y-auto">
+            <div class="flex items-center justify-between mb-sm">
+                <span
+                    class="bg-secondary-container text-on-secondary-container px-sm py-xs rounded-full text-label-md font-label-md">Difficulty_Level：
+                    {{ video.difficulty_level }}</span>
+                <div class="flex gap-xs">
+                    <span class="material-symbols-outlined text-outline" data-icon="share">share</span>
+                    <span class="material-symbols-outlined text-outline" data-icon="bookmark">bookmark</span>
+                </div>
+            </div>
+            <h2 class="font-headline-md text-on-surface mb-xs">Title： {{ video.title }}</h2>
+            <p class="text-on-surface-variant text-body-sm leading-relaxed">Channel_Name： {{ video.channel_name }}</p>
+            <p class="text-on-surface-variant text-body-sm leading-relaxed line-clamp-5">
+                Summary： {{ video.summary or 'No description available.' }}
+            </p>
+        </div>
+    </section>
+
+    <!-- Subtitle List Section -->
+    <section class="flex-1 flex flex-col bg-surface-container-lowest overflow-hidden">
+        <div class="p-md border-b border-outline-variant flex items-center justify-between">
+            <div>
+                <h3 class="font-headline-sm text-on-surface flex items-center gap-xs">
+                    <span class="material-symbols-outlined text-primary" data-icon="subtitles">subtitles</span>
+                    字幕リスト
+                </h3>
+                <p class="text-label-md text-on-surface-variant">{{ subtitles|length }} items found in <br> "{{
+                    video.title if video else 'Unknown' }}"</p>
+            </div>
+            <div class="flex items-center gap-sm">
+                <button
+                    class="flex items-center gap-xs px-sm py-1.5 border border-outline rounded-lg text-label-md font-label-md hover:bg-surface-container transition-colors">
+                    <span class="material-symbols-outlined text-[18px]" data-icon="filter_list">filter_list</span>
+                    Filter
+                </button>
+            </div>
+        </div>
+
+        <!-- Scrollable Subtitles -->
+        <div class="subtitle-scroll overflow-y-auto flex-1 p-sm space-y-sm">
+
+            <!-- editor.html のループ部分 -->
+            {% for subtitle in subtitles %}
+            <div data-id="{{ subtitle.subtitle_id }}" data-start="{{ subtitle.start_time }}"
+                class="subtitle-row relative p-md bg-white border border-primary/20 rounded-xl shadow-[0_4px_20px_rgba(0,61,155,0.08)] ring-1 ring-primary/10 group cursor-pointer hover:border-primary transition-all">
+
+                {% set sentence_data = none %}
+                {% set word_data = none %}
+                {% set has_recommendation = false %}
+
+                {% if subtitle.analyses %}
+                {# 紐づいている解析レコードの中に、単語や熟語のデータがあるかループで探す #}
+                {% for analysis in subtitle.analyses %}
+                {% if analysis.target_term and analysis.category in ['word', 'idiom'] %}
+                {% set has_recommendation = true %}
+                {% endif %}
+                {% endfor %}
+                {% endif %}
+
+                {% if has_recommendation %}
+                <div
+                    class="absolute top-2 right-2 flex items-center gap-xs bg-tertiary-fixed text-on-tertiary-fixed px-2 py-0.5 rounded-full shadow-sm">
+                    <span class="material-symbols-outlined text-[14px]" data-icon="auto_awesome"
+                        data-weight="fill">auto_awesome</span>
+                    <span class="text-[10px] font-bold tracking-wider">AI RECOMMENDATION</span>
+                </div>
+                {% endif %}
+
+                <div class="flex gap-md">
+                    <div class="flex flex-col items-center pt-1">
+                        <input type="checkbox" {% if subtitle.is_selected %}checked{% endif %}
+                            data-id="{{ subtitle.subtitle_id }}"
+                            class="subtitle-checkbox w-5 h-5 rounded border-outline text-primary focus:ring-primary transition-all" />
+                        <span class="text-[10px] font-mono mt-2 text-outline">{{ subtitle.start_time | format_time
+                            }}</span>
+                    </div>
+
+                    <div class="flex-1">
+                        <p class="text-body-md font-semibold text-on-surface mb-0.5">
+                            {{ subtitle.raw_text }}
+                        </p>
+
+                        {% if subtitle.analyses and subtitle.analyses[0].ja_translation %}
+                        <p class="text-body-sm text-on-surface-variant/80 font-medium mb-2">
+                            💡 {{ subtitle.analyses[0].ja_translation }}
+                        </p>
+                        {% else %}
+                        <p class="text-body-sm text-on-surface-variant/80 font-medium mb-2">
+                            💡 （ここにAIが生成した日本語訳が自動で表示されます）
+                        </p>
+                        {% endif %}
+
+                        <div class="mt-2 flex flex-wrap gap-xs">
+                            {% if subtitle.analyses and subtitle.analyses[0].target_term %}
+                            <div
+                                class="flex flex-col gap-xs w-full bg-surface-variant/30 p-sm rounded-lg border border-outline-variant/50">
+                                <div>
+                                    <span
+                                        class="bg-primary text-on-primary px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase">
+                                        🔑
+                                    </span>
+                                    <span class="text-body-sm font-bold text-primary ml-1.5">
+                                        {{ subtitle.analyses[0].target_term }}
+                                    </span>
+                                    <span
+                                        class="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded text-[10px] font-medium ml-2">
+                                        重要度: {{ subtitle.analyses[0].importance_score }}
+                                    </span>
+                                </div>
+
+                                {% if subtitle.analyses[0].ai_summary %}
+                                <p class="text-[11px] text-on-surface-variant leading-relaxed mt-1">
+                                    <span class="font-semibold text-on-surface">解説：</span>{{
+                                    subtitle.analyses[0].ai_summary }}
+                                </p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block fab %}
+<!-- モバイル・デスクトップ兼用のコンパクトなAI生成フローティングボタン -->
+<div class="fixed bottom-24 right-6 md:bottom-10 md:right-10 flex flex-col items-end gap-2 z-[100]">
+    <!-- AI生成ボタン本体（+アイコンからauto_awesomeに変更） -->
+    <button id="generate-btn"
+        class="w-14 h-14 rounded-full bg-primary text-on-primary shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group relative animate-bounce">
+        <span class="material-symbols-outlined text-[24px]" data-icon="auto_awesome"
+            data-weight="fill">auto_awesome</span>
+        <!-- デスクトップでマウスを乗せた時だけ文字を出すツールチップ -->
+        <span
+            class="absolute right-16 bg-inverse-surface text-inverse-on-surface text-xs whitespace-nowrap px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none hidden md:block shadow-md">
+            AIでカード生成
+        </span>
+    </button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 💡 1. プレイヤー変数を完全にグローバルに登録
+    window.player = null;
+
+    function createPlayer() {
+        if (window.player) return;
+
+        window.player = new YT.Player('youtube-player', {
+            videoId: '{{ video_id }}',
+            playerVars: {
+                autoplay: 0
+            },
+            events: {
+                onReady: function () {
+                    console.log("✅ Player Ready");
+                },
+                onError: function (e) {
+                    console.error("❌ Player Error", e);
+                }
+            }
+        });
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+        console.log("✅ API Ready");
+        createPlayer();
+    };
+
+    // API読み込み
+    (function () {
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        document.body.appendChild(tag);
+    })();
+
+    document.addEventListener('DOMContentLoaded', function () {
+
+        document.querySelectorAll('.subtitle-row').forEach(row => {
+
+            row.addEventListener('click', function (e) {
+
+                if (e.target.closest('.subtitle-checkbox')) return;
+
+                const startSeconds = parseFloat(this.dataset.start);
+
+                if (!window.player) {
+                    console.log("❌ player not ready");
+                    return;
+                }
+
+                window.player.seekTo(startSeconds, true);
+                window.player.playVideo();
+
+                console.log(`🚀 ${startSeconds}秒へ移動`);
+            });
+
+        });
+
+        // ② チェックボックスのリアルタイム同期処理
+        document.querySelectorAll('.subtitle-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                const subtitleId = this.dataset.id;
+                const status = this.checked ? 1 : 0;
+
+                fetch('/api/subtitle/update_status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subtitle_id: subtitleId, status: status })
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error('サーバーエラー');
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('DB更新成功:', data);
+                    })
+                    .catch(error => {
+                        console.error('エラー:', error);
+                        alert('選択状態の保存に失敗しました。');
+                        this.checked = !this.checked;
+                    });
+            });
+        });
+
+        // ③ AIカード生成ボタンの処理（正しいスコープへの統合）
+        const generateBtn = document.getElementById('generate-btn');
+        if (generateBtn) {
+            generateBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+
+                const btn = this;
+                const icon = btn.querySelector('.material-symbols-outlined');
+
+                // 1. ボタンをローディング状態にする（連打・多重送信防止）
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                if (icon) icon.classList.add('animate-spin'); // キラキラアイコンを回転
+
+                // 2. チェックされた字幕のIDを集める
+                const selectedIds = Array.from(document.querySelectorAll('.subtitle-checkbox:checked'))
+                    .map(cb => cb.dataset.id);
+
+                if (selectedIds.length === 0) {
+                    alert('Ankiカードにしたい字幕を1つ以上チェックしてください！\n(🔑マークの解説ボックスがある行をオンにしてください)');
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    if (icon) icon.classList.remove('animate-spin');
+                    return;
+                }
+
+                console.log("→ FlaskのAPIへデータを送信中... IDリスト:", selectedIds);
+
+                // 3. AI生成APIを叩く
+                fetch('/api/anki/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subtitle_ids: selectedIds })
+                })
+                    .then(res => {
+                        if (!res.ok) {
+                            return res.json().then(err => { throw new Error(err.error || 'AI生成に失敗しました'); });
+                        }
+                        return res.json();
+                    })
+                    .then(data => {
+                        console.log('🎉 AI生成カードデータ一覧:', data);
+                        alert(`成功！AIが ${data.cards.length} 件のAnkiカードを自動生成しました。確認画面へ移動します！`);
+
+                        // ✨ 4. 成功したら、url_forを使ってOutput画面へジャンプ！
+                        window.location.href = "{{ url_for('output') }}";
+                    })
+                    .catch(err => {
+                        console.error('❌ カード生成エラー:', err);
+                        alert('エラーが発生しました: ' + err.message);
+
+                        // エラーの時はボタンを元に戻す
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                        if (icon) icon.classList.remove('animate-spin');
+                    });
+            });
+        }
+    }); // ← ここで DOMContentLoaded が綺麗に閉じます
+</script>
+{% endblock %}

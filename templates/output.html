@@ -1,0 +1,229 @@
+<!-- templates/output.html -->
+{% extends "base.html" %}
+
+{% block title %}Output - AnkiTube{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-margin-mobile md:px-margin-desktop py-lg mb-24">
+    <!-- Hero Success Section -->
+    <section class="text-center mb-xl">
+        <div
+            class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary-container text-on-primary-container mb-md">
+            <span class="material-symbols-outlined text-4xl" data-icon="auto_awesome">auto_awesome</span>
+        </div>
+        <h1
+            class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-primary mb-xs">
+            AI generated your study cards!
+        </h1>
+        <p class="font-body-md text-body-md text-on-surface-variant">
+            <span class="font-bold text-primary" id="card-count-hero">{{ cards|length }}</span>
+            枚のフラッシュカードが正常に作成されました。
+        </p>
+    </section>
+
+    <!-- Preview Section -->
+    <!-- マクロファイルを 'components' という名前でインポート -->
+    {% import "macros/_card.html" as components %}
+
+    <section>
+        <div class="space-y-md">
+            {% for card in cards %}
+            <!-- マクロ（コンポーネント）を呼び出し -->
+            {{ components.anki_card(card) }}
+            {% else %}
+            <!-- カードがない場合の表示 -->
+            <div class="text-center py-12 bg-surface-container-low border-2 border-dashed border-outline/30 rounded-xl">
+                <p class="text-on-surface-variant">生成されたカードがありません。Editor画面から再生成してください。</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- View More Hint -->
+    <div class="mt-md text-center">
+        <button class="text-primary font-label-lg text-label-lg hover:underline flex items-center gap-1 mx-auto">
+            Show all {{ cards | length }} cards
+            <span class="material-symbols-outlined" data-icon="expand_more">expand_more</span>
+        </button>
+    </div>
+
+    <!-- Export Section -->
+    <section
+        class="bg-primary-container text-on-primary-container p-lg rounded-xl flex flex-col items-center text-center shadow-lg border border-primary">
+        <span class="material-symbols-outlined text-5xl mb-md" data-icon="file_download">file_download</span>
+        <h3 class="font-headline-md text-headline-md mb-xs">Ready to Export</h3>
+        <p class="font-body-md text-body-md mb-lg opacity-90 max-w-md">
+            CSVファイルとしてダウンロードし、Ankiアプリに直接インポートできます。
+        </p>
+        <button id="download-csv-btn"
+            class="w-full md:w-auto bg-on-primary-container text-primary-container font-label-lg text-label-lg px-xl py-md rounded-full hover:scale-105 transition-transform shadow-xl flex items-center justify-center gap-2">
+            Download CSV for Anki
+            <span class="material-symbols-outlined" data-icon="download">download</span>
+        </button>
+    </section>
+
+    <!-- Footer / Tips -->
+    <div class="mt-xl pt-lg border-t border-surface-container-high">
+        <div class="flex gap-sm items-start bg-surface-container-low p-md rounded-lg">
+            <span class="material-symbols-outlined text-primary" data-icon="lightbulb">lightbulb</span>
+            <div>
+                <h4 class="font-label-lg text-label-lg text-on-surface mb-1">Import Tip: Ankiへの取り込み方法</h4>
+                <p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                    Ankiデスクトップ版を開き、「ファイルを読み込む」からダウンロードしたCSVを選択してください。<br>
+                    フィールド設定で「Expression」「Meaning」「Example」「Japanese」が正しく割り当てられていることを確認してインポートを完了します。
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // =======================================================
+    // CSVダウンロード処理
+    // =======================================================
+    document.getElementById('download-csv-btn')?.addEventListener('click', async function (e) {
+        e.preventDefault();
+
+        const originalContent = this.innerHTML;
+        this.innerHTML = `Downloading... <span class="material-symbols-outlined animate-spin" data-icon="sync">sync</span>`;
+        this.disabled = true;
+
+        const subtitleIds = Array.from(document.querySelectorAll('.card-root'))
+            .map(el => parseInt(el.getAttribute('data-subtitle-id')))
+            .filter(id => !isNaN(id));
+
+        try {
+            const response = await fetch('/api/anki/download_csv', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subtitle_ids: subtitleIds })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'CSVのダウンロードに失敗しました。');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'ankitube_cards.csv';
+
+            document.body.appendChild(a);
+            a.click();
+
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+        } catch (error) {
+            alert(error.message);
+            console.error(error);
+        } finally {
+            this.innerHTML = originalContent;
+            this.disabled = false;
+        }
+    });
+
+    // =======================================================
+    // カード編集・保存処理（完全安全版）
+    // =======================================================
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.card-root').forEach(cardRoot => {
+            const viewMode = cardRoot.querySelector('.view-mode');
+            const editMode = cardRoot.querySelector('.edit-mode');
+            const toggleBtn = cardRoot.querySelector('.toggle-edit-btn');
+            const cancelBtn = cardRoot.querySelector('.cancel-edit-btn');
+            const saveBtn = cardRoot.querySelector('.save-card-btn');
+
+            // 編集モードへ切り替え
+            toggleBtn?.addEventListener('click', () => {
+                viewMode.classList.add('hidden');
+                editMode.classList.remove('hidden');
+            });
+
+            // キャンセル処理
+            cancelBtn?.addEventListener('click', () => {
+                editMode.classList.add('hidden');
+                viewMode.classList.remove('hidden');
+
+                cardRoot.querySelectorAll('input, textarea').forEach(input => {
+                    const original = input.getAttribute('data-original');
+                    if (original !== null) input.value = original;
+                });
+            });
+
+            // 保存処理
+            saveBtn?.addEventListener('click', async () => {
+                const subtitleId = cardRoot.getAttribute('data-subtitle-id');
+
+                // Safe value getter — returns "" if element missing, never throws
+                const val = (selector) => {
+                    const el = cardRoot.querySelector(selector);
+                    return el ? (el.value ?? '').trim() : '';
+                };
+
+                const expVal = val('.card-input-expression');
+                const ansVal = val('.card-input-answer');
+                const pronVal = val('.card-input-pronunciation');
+                const meanVal = val('.card-input-meaning');
+                const synVal = val('.card-input-synonyms');
+                const noteVal = val('.card-input-note');
+
+                saveBtn.disabled = true;
+                saveBtn.textContent = '保存中...';
+
+                try {
+                    const response = await fetch('/api/anki/update_card', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        // ✅ Send the 6 fields the backend actually reads
+                        body: JSON.stringify({
+                            subtitle_id: subtitleId,
+                            expression: expVal,
+                            answer: ansVal,
+                            pronunciation: pronVal,
+                            meaning: meanVal,
+                            synonyms: synVal,
+                            note: noteVal
+                        })
+                    });
+
+                    if (!response.ok) throw new Error('サーバーエラーが発生しました。');
+
+                    // Update view-mode display
+                    const safe = (sel, text) => { const el = cardRoot.querySelector(sel); if (el) el.textContent = text; };
+                    safe('.display-expression', expVal);
+                    safe('.answer-text', ansVal);
+                    safe('.meaning-text', meanVal);
+                    safe('.synonyms-text', synVal);
+                    safe('.note-text', noteVal);
+
+                    const pron = cardRoot.querySelector('.pronunciation');
+                    if (pron) { pron.textContent = pronVal; pron.classList.toggle('hidden', !pronVal); }
+
+                    const synDiv = cardRoot.querySelector('.display-synonyms');
+                    if (synDiv) synDiv.classList.toggle('hidden', !synVal);
+
+                    // Sync data-original for cancel
+                    cardRoot.querySelectorAll('input, textarea').forEach(input => {
+                        input.setAttribute('data-original', input.value);
+                    });
+
+                    editMode.classList.add('hidden');
+                    viewMode.classList.remove('hidden');
+
+                } catch (error) {
+                    console.error('カードの更新に失敗しました:', error);
+                    alert('通信エラーが発生しました。保存に失敗した可能性があります。');
+                } finally {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = '保存';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

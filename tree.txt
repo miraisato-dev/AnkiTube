@@ -1,0 +1,8 @@
+AnkiTube/
+├── app.py              # Flaskのメインプログラム（関数はここに書く）
+├── models.py           # DBテーブルの定義（SQLAlchemy）
+├── static/             # CSSやJavaScript（フロントエンド）
+├── templates/          # HTMLファイル（ホーム、エディタ、出力画面）
+├── instance/           # ankitube.db (SQLite本体が入る場所)
+├── .env                # OPENAI_API_KEYなどを隠しておくファイル
+└── requirements.txt    # 必要なライブラリ一覧
