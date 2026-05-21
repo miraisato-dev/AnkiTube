@@ -1,5 +1,7 @@
 # AnkiTube
 YouTube字幕からAnki用カードを自動生成するツール
+<img src="https://github.com/user-attachments/assets/14a4aa17-3169-43c5-9c2f-04a6485a100e" alt="Home Page Demo" width="100%" max-width="800px" />
+
 
 
 ### このアプリを動かすための最初のコマンド
@@ -17,3 +19,4 @@ YouTube字幕からAnki用カードを自動生成するツール
 - migrations/     # DBの変更履歴（Flask-Migrateが生成）
 - templates/      # HTMLファイル
 - static/         # CSS/JSファイル
+
