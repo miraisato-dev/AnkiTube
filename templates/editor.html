@@ -306,6 +306,63 @@
                     });
             });
         }
+
+        // ④ 字幕自動同期
+        const subtitleRows = Array.from(document.querySelectorAll('.subtitle-row')).map(row => ({
+            el: row,
+            start: parseFloat(row.dataset.start)
+        }));
+
+        let currentActive = null;
+        let userScrolling = false;
+        let scrollTimeout;
+
+        document.querySelector('.subtitle-scroll').addEventListener('scroll', () => {
+            userScrolling = true;
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                userScrolling = false;
+            }, 2000);
+        });
+
+        function syncSubtitles() {
+            if (!window.player || typeof window.player.getCurrentTime !== 'function') return;
+            if (window.player.getPlayerState() !== YT.PlayerState.PLAYING) return;
+
+            const currentTime = window.player.getCurrentTime();
+
+            let active = null;
+            for (let i = subtitleRows.length - 1; i >= 0; i--) {
+                if (subtitleRows[i].start <= currentTime) {
+                    active = subtitleRows[i];
+                    break;
+                }
+            }
+
+            if (active === currentActive) return;
+
+            if (currentActive) {
+                currentActive.el.classList.remove('border-primary', 'bg-primary/5');
+                currentActive.el.classList.add('border-primary/20');
+            }
+
+            if (active) {
+                active.el.classList.remove('border-primary/20');
+                active.el.classList.add('border-primary', 'bg-primary/5');
+                if (!userScrolling) {
+                    const container = document.querySelector('.subtitle-scroll');
+                    const rowTop = active.el.offsetTop;
+                    const rowHeight = active.el.offsetHeight;
+                    const containerHeight = container.offsetHeight;
+                    container.scrollTop = rowTop - (containerHeight / 2) + (rowHeight / 2);
+                }
+            }
+
+            currentActive = active;
+        }
+
+        setInterval(syncSubtitles, 200);
+
     }); // DOMContentLoaded close
 </script>
 {% endblock %}
