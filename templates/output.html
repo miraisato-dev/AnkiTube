@@ -108,10 +108,9 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-    // =======================================================
+    // =================
     // モーダル表示
-    // =======================================================
-
+    // =================
         document.getElementById('download-csv-btn')?.addEventListener('click', () => {
             document.getElementById('filename-modal').classList.remove('hidden');
         });
@@ -153,7 +152,7 @@
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `${filename}.csv`; // ← ユーザーが入力したファイル名
+                a.download = `${filename}.csv`; // ユーザーが入力したファイル名
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -266,6 +265,42 @@
                 }
             });      // closes saveBtn addEventListener
         });          // closes forEach
+
+        // =======================================================
+        // カード削除処理
+        // =======================================================
+        document.querySelectorAll('.delete-card-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const cardRoot = btn.closest('.card-root');
+                const subtitleId = cardRoot.getAttribute('data-subtitle-id');
+
+                if (!confirm('このカードを削除しますか？')) return;
+
+                try {
+                    const response = await fetch('/api/anki/delete_card', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ subtitle_id: subtitleId })
+                    });
+
+                    if (!response.ok) throw new Error('削除に失敗しました。');
+
+                    // DOMからカードを削除
+                    cardRoot.style.transition = 'opacity 0.3s';
+                    cardRoot.style.opacity = '0';
+                    setTimeout(() => cardRoot.remove(), 300);
+
+                    // カード枚数を更新
+                    const count = document.querySelectorAll('.card-root').length - 1;
+                    const counter = document.getElementById('card-count-hero');
+                    if (counter) counter.textContent = count;
+
+                } catch (error) {
+                    alert(error.message);
+                    console.error(error);
+                }
+            });
+        });
     });              // closes DOMContentLoaded
 
 </script>

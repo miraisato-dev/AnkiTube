@@ -354,6 +354,34 @@ def handle_update_card():
         return jsonify({'result': 'Error', 'message': f'データベースの更新に失敗しました: {str(e)}'}), 500
 
 
+@app.route('/api/anki/delete_card', methods=['POST'])
+def delete_anki_card():
+    try:
+        data = request.get_json()
+        subtitle_id = data.get('subtitle_id')
+
+        if not subtitle_id:
+            return jsonify({'error': 'subtitle_idが指定されていません'}), 400
+
+        card = AICard.query.filter_by(subtitle_id=subtitle_id).first()
+        if not card:
+            return jsonify({'error': 'カードが見つかりません'}), 404
+
+        db.session.delete(card)
+
+        subtitle = Subtitle.query.filter_by(subtitle_id=subtitle_id).first()
+        if subtitle:
+            subtitle.is_selected = False
+
+        db.session.commit()
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        print(f"カード削除中にエラー: {str(e)}")
+        return jsonify({'error': '削除に失敗しました'}), 500
+
+
 def sanitize_filename(title: str, max_length: int = 50) -> str:
     sanitized = re.sub(r'[\\/*?:"<>|]', '', title)
     sanitized = sanitized.replace(' ', '_')
