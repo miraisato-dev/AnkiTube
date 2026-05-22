@@ -54,6 +54,9 @@ flask run
 YOUTUBE_API_KEY=あなたのYouTube_Data_API_v3キー
 GEMINI_API_KEY=あなたのGemini_API_キー
 
+### ER図
+<img width="782" height="450" alt="anki_tube_er" src="https://github.com/user-attachments/assets/19216bf0-2ad3-4621-a4c2-9e297dd1d2bc" />
+
 
 ### 今後つけたい機能
 - 絞り込み検索(履歴画面＋編集画面)
