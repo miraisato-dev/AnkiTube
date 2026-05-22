@@ -167,7 +167,7 @@
 
 {% block scripts %}
 <script>
-    // 💡 1. プレイヤー変数を完全にグローバルに登録
+    // 1. プレイヤー変数を完全にグローバルに登録
     window.player = null;
 
     function createPlayer() {
@@ -180,17 +180,17 @@
             },
             events: {
                 onReady: function () {
-                    console.log("✅ Player Ready");
+                    console.log("Player Ready");
                 },
                 onError: function (e) {
-                    console.error("❌ Player Error", e);
+                    console.error("Player Error", e);
                 }
             }
         });
     }
 
     window.onYouTubeIframeAPIReady = function () {
-        console.log("✅ API Ready");
+        console.log("API Ready");
         createPlayer();
     };
 
@@ -212,14 +212,14 @@
                 const startSeconds = parseFloat(this.dataset.start);
 
                 if (!window.player) {
-                    console.log("❌ player not ready");
+                    console.log("player not ready");
                     return;
                 }
 
                 window.player.seekTo(startSeconds, true);
                 window.player.playVideo();
 
-                console.log(`🚀 ${startSeconds}秒へ移動`);
+                console.log(`${startSeconds}秒へ移動`);
             });
 
         });
@@ -292,13 +292,11 @@
                     })
                     .then(data => {
                         console.log('🎉 AI生成カードデータ一覧:', data);
-                        alert(`成功！AIが ${data.cards.length} 件のAnkiカードを自動生成しました。確認画面へ移動します！`);
-
-                        // ✨ 4. 成功したら、url_forを使ってOutput画面へジャンプ！
+                        // 4. 成功したら、url_forを使ってOutput画面へ
                         window.location.href = "{{ url_for('output') }}";
                     })
                     .catch(err => {
-                        console.error('❌ カード生成エラー:', err);
+                        console.error('カード生成エラー:', err);
                         alert('エラーが発生しました: ' + err.message);
 
                         // エラーの時はボタンを元に戻す
@@ -308,6 +306,6 @@
                     });
             });
         }
-    }); // ← ここで DOMContentLoaded が綺麗に閉じます
+    }); // DOMContentLoaded close
 </script>
 {% endblock %}

@@ -40,12 +40,12 @@
     </section>
 
     <!-- View More Hint -->
-    <div class="mt-md text-center">
+    <!-- <div class="mt-md text-center">
         <button class="text-primary font-label-lg text-label-lg hover:underline flex items-center gap-1 mx-auto">
             Show all {{ cards | length }} cards
             <span class="material-symbols-outlined" data-icon="expand_more">expand_more</span>
         </button>
-    </div>
+    </div> -->
 
     <!-- Export Section -->
     <section
@@ -76,61 +76,103 @@
         </div>
     </div>
 </div>
+
+<!-- ファイル名入力 -->
+<div id="filename-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-margin-mobile">
+    <div class="bg-surface rounded-xl border border-outline-variant p-lg w-full max-w-sm shadow-xl">
+        <h3 class="font-headline-sm text-headline-sm text-on-surface mb-md">ファイル名を入力</h3>
+
+        <label class="font-label-lg text-label-lg text-on-surface-variant block mb-xs">File name</label>
+        <div class="flex items-center border border-outline rounded-lg overflow-hidden">
+            <input id="modal-filename" type="text"
+                value="{{ video_title | default('ankitube_cards') }}"
+                class="flex-1 bg-surface px-sm py-2 font-body-md text-body-md text-on-surface outline-none" />
+            <span class="px-sm py-2 font-body-md text-on-surface-variant border-l border-outline">.csv</span>
+        </div>
+
+        <div class="flex gap-sm mt-md justify-end">
+            <button id="modal-cancel-btn"
+                class="font-label-lg text-label-lg px-md py-2 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors">
+                キャンセル
+            </button>
+            <button id="modal-download-btn"
+                class="font-label-lg text-label-lg px-md py-2 rounded-full bg-primary text-on-primary hover:scale-105 transition-transform flex items-center gap-1">
+                Download
+                <span class="material-symbols-outlined text-base" data-icon="download">download</span>
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+    document.addEventListener('DOMContentLoaded', () => {
+    // =======================================================
+    // モーダル表示
+    // =======================================================
+
+        document.getElementById('download-csv-btn')?.addEventListener('click', () => {
+            document.getElementById('filename-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('modal-cancel-btn')?.addEventListener('click', () => {
+            document.getElementById('filename-modal').classList.add('hidden');
+        });
+
+
     // =======================================================
     // CSVダウンロード処理
     // =======================================================
-    document.getElementById('download-csv-btn')?.addEventListener('click', async function (e) {
-        e.preventDefault();
+        document.getElementById('modal-download-btn')?.addEventListener('click', async function () {
+            const filename = document.getElementById('modal-filename').value.trim() || 'ankitube_cards';
+            document.getElementById('filename-modal').classList.add('hidden');
 
-        const originalContent = this.innerHTML;
-        this.innerHTML = `Downloading... <span class="material-symbols-outlined animate-spin" data-icon="sync">sync</span>`;
-        this.disabled = true;
+            const btn = document.getElementById('download-csv-btn');
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = `Downloading... <span class="material-symbols-outlined animate-spin" data-icon="sync">sync</span>`;
+            btn.disabled = true;
 
-        const subtitleIds = Array.from(document.querySelectorAll('.card-root'))
-            .map(el => parseInt(el.getAttribute('data-subtitle-id')))
-            .filter(id => !isNaN(id));
+            const subtitleIds = Array.from(document.querySelectorAll('.card-root'))
+                .map(el => parseInt(el.getAttribute('data-subtitle-id')))
+                .filter(id => !isNaN(id));
 
-        try {
-            const response = await fetch('/api/anki/download_csv', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ subtitle_ids: subtitleIds })
-            });
+            try {
+                const response = await fetch('/api/anki/download_csv', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subtitle_ids: subtitleIds })
+                });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'CSVのダウンロードに失敗しました。');
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'CSVのダウンロードに失敗しました。');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${filename}.csv`; // ← ユーザーが入力したファイル名
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+
+            } catch (error) {
+                alert(error.message);
+                console.error(error);
+            } finally {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
             }
+        });
 
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'ankitube_cards.csv';
 
-            document.body.appendChild(a);
-            a.click();
 
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-
-        } catch (error) {
-            alert(error.message);
-            console.error(error);
-        } finally {
-            this.innerHTML = originalContent;
-            this.disabled = false;
-        }
-    });
-
-    // =======================================================
-    // カード編集・保存処理（完全安全版）
-    // =======================================================
-    document.addEventListener('DOMContentLoaded', () => {
+        // =======================================================
+        // カード編集・保存処理
+        // =======================================================
         document.querySelectorAll('.card-root').forEach(cardRoot => {
             const viewMode = cardRoot.querySelector('.view-mode');
             const editMode = cardRoot.querySelector('.edit-mode');
@@ -179,7 +221,7 @@
                     const response = await fetch('/api/anki/update_card', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        // ✅ Send the 6 fields the backend actually reads
+                        // Send the 6 fields the backend actually reads
                         body: JSON.stringify({
                             subtitle_id: subtitleId,
                             expression: expVal,
@@ -222,8 +264,9 @@
                     saveBtn.disabled = false;
                     saveBtn.textContent = '保存';
                 }
-            });
-        });
-    });
+            });      // closes saveBtn addEventListener
+        });          // closes forEach
+    });              // closes DOMContentLoaded
+
 </script>
 {% endblock %}

@@ -1,6 +1,7 @@
 # app.py
 # Flask-Migrateの紐付け：ターミナルで flask db upgrade を実行することでmodels.pyの内容が実際のDBに反映される。
 import os
+import re
 import json
 import sqlite3
 
@@ -353,6 +354,11 @@ def handle_update_card():
         return jsonify({'result': 'Error', 'message': f'データベースの更新に失敗しました: {str(e)}'}), 500
 
 
+def sanitize_filename(title: str, max_length: int = 50) -> str:
+    sanitized = re.sub(r'[\\/*?:"<>|]', '', title)
+    sanitized = sanitized.replace(' ', '_')
+    return sanitized[:max_length] or 'ankitube_cards'
+
 @app.route('/api/anki/download_csv', methods=['POST'])
 def download_anki_csv():
     """
@@ -390,13 +396,15 @@ def download_anki_csv():
             })
 
         csv_file = create_csv(csv_data)
+        filename_input = data.get('filename', '')
+        filename = sanitize_filename(filename_input) if filename_input else 'ankitube_cards'
 
         # ブラウザに対して「これをファイルとして手元に保存してね！」と直接ダウンロードさせる
         return send_file(
             csv_file,
             mimetype='text/csv',
             as_attachment=True,
-            download_name='ankitube_cards.csv' # ユーザーの手元に保存されるファイル名
+            download_name=f'{filename}.csv'
         )
 
     except Exception as e:

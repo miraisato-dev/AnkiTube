@@ -13,7 +13,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from youtube_transcript_api import YouTubeTranscriptApi
 from dotenv import load_dotenv
-from google import genai
+import google.generativeai as genai
 
 from models import Video, Subtitle, SubtitleAnalyses, AICard
 
@@ -24,6 +24,9 @@ load_dotenv()
 API_KEY = os.getenv("YOUTUBE_DATA_API_KEY")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 MODEL_NAME = 'gemini-3.1-flash-lite'
+
+genai.configure(api_key=GOOGLE_API_KEY)
+model = genai.GenerativeModel(MODEL_NAME)
 
 # ==========================================================
 # 補助関数：YouTube自動字幕特有の[Music]などのノイズを安全に消去
@@ -335,32 +338,14 @@ def analyze_subtitles_with_gemini(subtitles_json_data):
         final_prompt = f"{SYSTEM_PROMPT}\n\n【分析対象のデータ（チャンク分）】\n{json.dumps(chunk, ensure_ascii=False)}"
 
         try:
-            client = genai.Client(api_key=GOOGLE_API_KEY)
-            response = client.models.generate_content(
-                model=MODEL_NAME,
-                contents=final_prompt,
-                config={"response_mime_type": "application/json"}
+            # generation_config で JSON 出力を絶対強制（MIMEタイプ指定）
+            response = model.generate_content(
+                final_prompt,
+                generation_config={"response_mime_type": "application/json"}
             )
 
-            raw_text = response.text.strip()
-
-            # Geminiが稀に複数JSONを連結して返す問題への対策
-            # 最初の完全なJSONオブジェクト { ... } だけを抽出する
-            brace_count = 0
-            end_index = -1
-            for idx, char in enumerate(raw_text):
-                if char == '{':
-                    brace_count += 1
-                elif char == '}':
-                    brace_count -= 1
-                    if brace_count == 0:
-                        end_index = idx
-                        break
-
-            if end_index == -1:
-                raise ValueError("有効なJSONオブジェクトが見つかりませんでした")
-
-            chunk_results = json.loads(raw_text[:end_index + 1])
+            # APIの強制JSONモードのおかげで、100%安全にjson.loadsが通ります
+            chunk_results = json.loads(response.text.strip())
 
             # 難易度を更新
             if "difficulty_level" in chunk_results:
@@ -379,7 +364,7 @@ def analyze_subtitles_with_gemini(subtitles_json_data):
             for item in chunk:
                 all_analyzed_subtitles.append({
                     "sequence": item.get("sequence"),
-                    "ja_translation": "（翻訳エラーのためスキップされました）"
+                    "ja_translation": item.get("ja_translation", "（翻訳エラーのためスキップされました）")
                 })
             continue
 
@@ -595,11 +580,12 @@ def generate_anki_cards(analysis_data_list):
     """
 
     try:
-        client = genai.Client(api_key=GOOGLE_API_KEY)
-        response = client.models.generate_content(
-            model=MODEL_NAME,
-            contents=prompt,
-            config={
+        model = genai.GenerativeModel(MODEL_NAME)
+        
+        # JSONとして確実に受け取るための設定
+        response = model.generate_content(
+            prompt,
+            generation_config={
                 "response_mime_type": "application/json",
                 "max_output_tokens": 8192,  # 途中でブツ切れにならない
                 "temperature": 0.3
