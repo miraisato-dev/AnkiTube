@@ -29,6 +29,8 @@ class Video(db.Model): # app.pyのdbを継承
 
     difficulty_level = db.Column(db.String(5))  # "A2", "B1" など
     summary = db.Column(db.Text)
+
+    duration = db.Column(db.String(20), nullable=True)
     
     # current_timestampより書きやすいのでfunc.now()を選んだ
     created_at = Column(DateTime, 

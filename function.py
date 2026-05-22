@@ -57,6 +57,19 @@ def get_video_id(url):
             return match.group(1)
     return None
 
+def parse_duration(iso_duration: str) -> str:
+    """PT12M45S → '12:45'"""
+    if not iso_duration:
+        return '??:??'
+    match = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', iso_duration)
+    if not match:
+        return '??:??'
+    hours = int(match.group(1) or 0)
+    minutes = int(match.group(2) or 0)
+    seconds = int(match.group(3) or 0)
+    if hours:
+        return f"{hours}:{minutes:02d}:{seconds:02d}"
+    return f"{minutes}:{seconds:02d}"
 
 def get_video_metadata(video_id):
     """動画のメタデータをYouTube Data V3 APIから取得"""
@@ -213,7 +226,8 @@ def save_metadata_and_subtitles(metadata, fetched):
             video_id=metadata["video_id"],
             title=metadata["title"],
             channel_name=metadata["channel_name"],
-            summary=metadata.get("summary")
+            summary=metadata.get("summary"),
+            duration=parse_duration(metadata.get("duration"))
         )
 
         db.session.add(new_video)

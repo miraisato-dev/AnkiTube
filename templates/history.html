@@ -1,28 +1,22 @@
 <!-- templates/history.html -->
 {% extends "base.html" %}
 
-{% block title %}Home - AnkiTube{% endblock %}
+{% block title %}History - AnkiTube{% endblock %}
 
 {% block content %}
 
 <!-- mainの役割（幅制限と、レスポンシブな上下左右の余白を確実に適用） -->
 <div class="max-w-[1280px] mx-auto px-[16px] md:px-[64px] py-[48px]">
 
-    <!-- <div class="mb-lg">
-        <div class="flex items-center gap-xs text-on-surface-variant mb-base">
-            <span class="font-label-md text-label-md">Dashboard</span>
-            <span class="material-symbols-outlined text-[16px]">chevron_right</span>
-            <span class="font-label-md text-label-md text-primary">Recently Viewed</span>
-        </div>
-
+    <div class="mb-lg">
         <h2
             class="font-headline-xl-mobile md:font-headline-xl text-headline-xl-mobile md:text-headline-xl text-on-surface tracking-tight">
             History</h2>
         <p class="font-body-md text-body-md text-on-surface-variant mt-xs max-w-2xl">
-            Continue your progress on previously watched lessons. All flashcards and annotations are saved
-            automatically.
+            Continue your progress on previously watched lessons. <br>
+            All flashcards and annotations are saved automatically.
         </p>
-    </div> -->
+    </div>
     <!-- History Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md lg:gap-gutter">
         <!-- Video Card 1 -->
@@ -40,7 +34,7 @@
                     onerror="this.src='https://img.youtube.com/vi/{{ video.video_id }}/hqdefault.jpg'" />
                 <div
                     class="absolute bottom-2 right-2 bg-on-background/80 text-white px-2 py-0.5 rounded font-label-md text-label-md">
-                    12:45</div>
+                    {{ video.duration or '??:??' }}</div>
                 <div
                     class="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <span class="material-symbols-outlined text-white text-5xl" data-weight="fill">play_circle</span>
