@@ -1,0 +1,92 @@
+<!-- loading.html -->
+{% extends "base.html" %}
+{% block title %}Analyzing... - AnkiTube{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex flex-col items-center justify-center text-center px-margin-mobile">
+
+    <!-- Circular Progress -->
+    <div class="relative w-48 h-48 mb-lg">
+        <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+            <!-- Background circle -->
+            <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="6"
+                class="text-surface-container-high" />
+            <!-- Progress circle -->
+            <circle id="progress-ring" cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="6"
+                stroke-linecap="round" class="text-primary transition-all duration-700 ease-out"
+                stroke-dasharray="263.9" stroke-dashoffset="263.9" />
+        </svg>
+        <!-- Percentage text in center -->
+        <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span id="percent-text" class="font-headline-md text-headline-md text-primary">0%</span>
+        </div>
+    </div>
+
+    <h2
+        class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-primary mb-xs">
+        Analyzing your video...
+    </h2>
+    <p id="status-text" class="font-body-md text-body-md text-on-surface-variant mb-xl">
+        準備中...
+    </p>
+
+    <!-- Error state (hidden by default) -->
+    <div id="error-state" class="hidden mt-md">
+        <p class="font-body-md text-body-md text-error mb-md">エラーが発生しました。もう一度お試しください。</p>
+        <a href="/"
+            class="bg-primary text-on-primary font-label-lg text-label-lg px-xl py-md rounded-full hover:scale-105 transition-transform">
+            ホームに戻る
+        </a>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const videoId = "{{ video_id }}";
+    const ring = document.getElementById('progress-ring');
+    const percentText = document.getElementById('percent-text');
+    const statusText = document.getElementById('status-text');
+    const errorState = document.getElementById('error-state');
+    const circumference = 263.9;
+
+    function setProgress(percent) {
+        const offset = circumference - (percent / 100) * circumference;
+        ring.style.strokeDashoffset = offset;
+        percentText.textContent = percent + '%';
+    }
+
+    async function poll() {
+        try {
+            const res = await fetch(`/api/status/${videoId}`);
+            const data = await res.json();
+
+            setProgress(data.percent || 0);
+            statusText.textContent = data.message || '処理中...';
+
+            if (data.error) {
+                errorState.classList.remove('hidden');
+                return; // ポーリング停止
+            }
+
+            if (data.done && data.percent === 100) {
+                // 少し待ってからエディターへ
+                setTimeout(() => {
+                    window.location.href = `/editor/${videoId}`;
+                }, 800);
+                return; // ポーリング停止
+            }
+
+        } catch (e) {
+            console.error('ポーリングエラー:', e);
+        }
+
+        // 1秒後に再ポーリング
+        setTimeout(poll, 1000);
+    }
+
+    // 開始
+    poll();
+</script>
+{% endblock %}

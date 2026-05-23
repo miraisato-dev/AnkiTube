@@ -31,6 +31,9 @@ from function import (get_video_id,
                                 )
 
 
+from threading import Thread
+
+
 
 # ==================================================
 # インスタンス生成
@@ -108,12 +111,16 @@ def delete_video():
         print(f"動画削除中にエラー: {str(e)}")
         return jsonify({'error': '削除に失敗しました'}), 500
 
+
+
+# ビデオごとの処理進捗を管理する辞書
+processing_progress = {}
+
 # URLを受け取って処理を開始するルート
 @app.route('/get_subtitles', methods=['POST'])
 def get_subtitles():
     # 1. フォームからURLを取得してIDを抜く
     url = request.form.get('youtube_url')
-
     # 2. function.py の職人に ID抽出を頼む
     video_id = get_video_id(url)
     if not video_id:
@@ -122,53 +129,138 @@ def get_subtitles():
     # 3. セッションに「今編集中のID」を保存
     session['current_video_id'] = video_id
 
-    # DBから既存の動画をチェック
-    existing_video = Video.query.get(video_id)
+    # 進捗を初期化
+    processing_progress[video_id] = {'percent': 0, 'message': '準備中...', 'done': False}
 
-    if not existing_video:
-        print(f"=== [DEBUG] 新規動画です。データを取得します (ID: {video_id}) ===")
-        # A. メタデータ取得
-        metadata = get_video_metadata(video_id)
-        # B. 字幕取得
-        fetched = fetch_subtitles(video_id)
+    def process():
+        with app.app_context():
+            try:
+                # ステップ1: メタデータ・字幕取得
+                processing_progress[video_id] = {'percent': 5, 'message': '字幕を取得しています...', 'done': False}
+                
+                existing_video = Video.query.get(video_id)
+                if not existing_video:
+                    metadata = get_video_metadata(video_id)
+                    fetched = fetch_subtitles(video_id)
+                    
+                    if metadata and fetched:
+                        # ステップ2: DB保存
+                        processing_progress[video_id] = {'percent': 15, 'message': 'データを保存しています...', 'done': False}
+                        save_metadata_and_subtitles(metadata, fetched)
+
+                else:
+                    print(f"=== [DEBUG] 既にDBに存在する動画です (ID: {video_id}) ===")
+
+                
+                # ステップ2: AI分析
+                analysis_exists = db.session.query(SubtitleAnalyses).join(Subtitle).filter(Subtitle.video_id == video_id).first()
+
+                if not analysis_exists:
+                    print("=== [DEBUG] AI分析データ未作成のため、Gemini解析を開始します ===")
+                    processing_progress[video_id] = {'percent': 20, 'message': 'AIが分析を開始します...', 'done': False}
+
+                    subtitles_from_db = Subtitle.query.filter_by(video_id=video_id).order_by(Subtitle.sequence).all()
+                    subtitles_data_for_ai = json.dumps([
+                        {"sequence": s.sequence, "text": s.raw_text} for s in subtitles_from_db
+                    ], ensure_ascii=False)
+
+                    total_chunks = max(1, (len(subtitles_from_db) + 19) // 20)
+
+                    def on_chunk_progress(current_chunk):
+                        percent = 20 + int((current_chunk / total_chunks) * 70)
+                        processing_progress[video_id] = {
+                            'percent': percent,
+                            'message': f'AIが分析中... ({current_chunk}/{total_chunks})',
+                            'done': False
+                        }
+
+                    analysis_package = analyze_subtitles_with_gemini(subtitles_data_for_ai, on_chunk_progress)
+
+                    if analysis_package:
+                        processing_progress[video_id] = {'percent': 92, 'message': '分析結果を保存しています...', 'done': False}
+                        video = Video.query.get(video_id)
+                        if video:
+                            video.difficulty_level = analysis_package.get("difficulty_level")
+                            db.session.commit()
+                        save_importance_analysis(subtitles_from_db, analysis_package)
+                    else:
+                        print("=== [ERROR] Geminiからの応答が空、またはパースに失敗しました ===")
+                else:
+                    print("=== [DEBUG] AI分析データは既に存在するため解析をスキップします ===")
+
+                # 完了
+                processing_progress[video_id] = {'percent': 100, 'message': '完了！', 'done': True}
+
+            except Exception as e:
+                print(f"[ERROR in background thread]: {e}")
+                processing_progress[video_id] = {'percent': 0, 'message': 'エラーが発生しました', 'done': True, 'error': True}
+
+    Thread(target=process).start()
+    return redirect(url_for('loading', video_id=video_id))
+
+
+
+
+    # # DBから既存の動画をチェック
+    # existing_video = Video.query.get(video_id)
+
+    # if not existing_video:
+    #     print(f"=== [DEBUG] 新規動画です。データを取得します (ID: {video_id}) ===")
+    #     # A. メタデータ取得
+    #     metadata = get_video_metadata(video_id)
+    #     # B. 字幕取得
+    #     fetched = fetch_subtitles(video_id)
         
-        if metadata and fetched:
-            # C. 動画と字幕をDBに保存
-            save_metadata_and_subtitles(metadata, fetched)
-    else:
-        print(f"=== [DEBUG] 既にDBに存在する動画です (ID: {video_id}) ===")
+    #     if metadata and fetched:
+    #         # C. 動画と字幕をDBに保存
+    #         save_metadata_and_subtitles(metadata, fetched)
+    # else:
+    #     print(f"=== [DEBUG] 既にDBに存在する動画です (ID: {video_id}) ===")
 
-    # 【重要】既存動画であっても、AI分析データ(SubtitleAnalysis)が空っぽなら解析を実行する
-    analysis_exists = db.session.query(SubtitleAnalyses).join(Subtitle).filter(Subtitle.video_id == video_id).first()
+    # # 【重要】既存動画であっても、AI分析データ(SubtitleAnalysis)が空っぽなら解析を実行する
+    # analysis_exists = db.session.query(SubtitleAnalyses).join(Subtitle).filter(Subtitle.video_id == video_id).first()
 
-    if not analysis_exists:
-        print("=== [DEBUG] AI分析データ未作成のため、Gemini解析を開始します ===")
+    # if not analysis_exists:
+    #     print("=== [DEBUG] AI分析データ未作成のため、Gemini解析を開始します ===")
         
-        # 字幕データをDBから取得してAI用のJSONを作る
-        subtitles_from_db = Subtitle.query.filter_by(video_id=video_id).order_by(Subtitle.sequence).all()
-        subtitles_data_for_ai = json.dumps([
-            {"sequence": s.sequence, "text": s.raw_text} for s in subtitles_from_db
-        ], ensure_ascii=False)
+    #     # 字幕データをDBから取得してAI用のJSONを作る
+    #     subtitles_from_db = Subtitle.query.filter_by(video_id=video_id).order_by(Subtitle.sequence).all()
+    #     subtitles_data_for_ai = json.dumps([
+    #         {"sequence": s.sequence, "text": s.raw_text} for s in subtitles_from_db
+    #     ], ensure_ascii=False)
 
-        # 2.5-flash で解析
-        analysis_package = analyze_subtitles_with_gemini(subtitles_data_for_ai)
+    #     # 2.5-flash で解析
+    #     analysis_package = analyze_subtitles_with_gemini(subtitles_data_for_ai)
         
-        if analysis_package:
-            # 難易度(difficulty_level)をVideoテーブルに保存
-            video = Video.query.get(video_id)
-            if video:
-                video.difficulty_level = analysis_package.get("difficulty_level")
-                db.session.commit()
+    #     if analysis_package:
+    #         # 難易度(difficulty_level)をVideoテーブルに保存
+    #         video = Video.query.get(video_id)
+    #         if video:
+    #             video.difficulty_level = analysis_package.get("difficulty_level")
+    #             db.session.commit()
             
-            # 最新の save_importance_analysis(video_id, analysis_results) の形に合わせて呼び出す
-            save_importance_analysis(subtitles_from_db, analysis_package)
-        else:
-            print("=== [ERROR] Geminiからの応答が空、またはパースに失敗しました ===")
-    else:
-        print("=== [DEBUG] AI分析データは既に存在するため解析をスキップします ===")
+    #         # 最新の save_importance_analysis(video_id, analysis_results) の形に合わせて呼び出す
+    #         save_importance_analysis(subtitles_from_db, analysis_package)
+    #     else:
+    #         print("=== [ERROR] Geminiからの応答が空、またはパースに失敗しました ===")
+    # else:
+    #     print("=== [DEBUG] AI分析データは既に存在するため解析をスキップします ===")
 
-    # 4. 全て終わったらEditor画面へリダイレクト
-    return redirect(url_for('editor', video_id=video_id))
+    # # 4. 全て終わったらEditor画面へリダイレクト
+    # return redirect(url_for('editor', video_id=video_id))
+
+
+@app.route('/loading/<video_id>')
+def loading(video_id):
+    return render_template('loading.html', video_id=video_id)
+
+@app.route('/api/status/<video_id>')
+def check_status(video_id):
+    progress = processing_progress.get(video_id, {
+        'percent': 0, 'message': '準備中...', 'done': False
+    })
+    return jsonify(progress)
+
 
 # 編集ページ
 @app.route('/editor/<video_id>')

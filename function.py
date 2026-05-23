@@ -284,7 +284,7 @@ def save_metadata_and_subtitles(metadata, fetched):
 # B. Geminiによる「重要度分析」
 # ===============================
 
-def analyze_subtitles_with_gemini(subtitles_json_data):
+def analyze_subtitles_with_gemini(subtitles_json_data, on_progress=None):
     """B.1 字幕リストを20行ずつのチャンクに分割し、Geminiで重要度分析と翻訳を行う"""
     # 1. 渡されたデータが文字列(JSON)ならPythonのリストに復元
     if isinstance(subtitles_json_data, str):
@@ -309,6 +309,11 @@ def analyze_subtitles_with_gemini(subtitles_json_data):
     for i in range(0, total_subtitles, chunk_size):
         chunk = subtitles_list[i : i + chunk_size]
         print(f" チャンク処理中: {i+1}行目 〜 {min(i+chunk_size, total_subtitles)}行目...")
+
+        # 進捗コールバック
+        current_chunk = (i // chunk_size) + 1
+        if on_progress:
+            on_progress(current_chunk)
 
         SYSTEM_PROMPT = f"""
         あなたは非常に優秀な英語教師であり、言語学者、そしてプロの翻訳家です。
