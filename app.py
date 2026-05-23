@@ -88,6 +88,26 @@ def history():
     ).order_by(Video.created_at.desc()).all()
     return render_template('history.html', videos=videos)
 
+@app.route('/api/video/delete', methods=['POST'])
+def delete_video():
+    try:
+        data = request.get_json()
+        video_id = data.get('video_id')
+        if not video_id:
+            return jsonify({'error': 'video_idが指定されていません'}), 400
+
+        conn = sqlite3.connect(os.path.join(base_dir, 'data.sqlite'))
+        conn.execute('DELETE FROM ai_cards WHERE subtitle_id IN (SELECT subtitle_id FROM subtitles WHERE video_id=?)', (video_id,))
+        conn.execute('DELETE FROM subtitle_analyses WHERE subtitle_id IN (SELECT subtitle_id FROM subtitles WHERE video_id=?)', (video_id,))
+        conn.execute('DELETE FROM subtitles WHERE video_id=?', (video_id,))
+        conn.execute('DELETE FROM videos WHERE video_id=?', (video_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"動画削除中にエラー: {str(e)}")
+        return jsonify({'error': '削除に失敗しました'}), 500
+
 # URLを受け取って処理を開始するルート
 @app.route('/get_subtitles', methods=['POST'])
 def get_subtitles():
@@ -266,6 +286,12 @@ def output():
         print(f"★ [CRITICAL DEBUG] /output画面で読み込んだカード数: {len(cards)}件")
         print(f"==================================================")
 
+        video_title = 'ankitube_cards'
+        if current_video_id:
+            video = db.session.get(Video, current_video_id)
+            if video and video.title:
+                video_title = re.sub(r'\s+', '_', video.title)
+
         # データベースが本当に空だった場合だけのセーフティ
         if not cards:
             print("[WARNING] AICardテーブルが空です。セーフティデータを表示します。")
@@ -287,7 +313,23 @@ def output():
         cards = []
 
     # 3. HTMLマクロ側にそのまま引き渡し
-    return render_template('output.html', cards=cards)
+    return render_template('output.html', cards=cards, video_title=video_title)
+
+@app.route('/output/<video_id>')
+def output_by_id(video_id):
+    # use video_id from URL instead of session
+    cards = get_generated_cards_from_db(video_id=video_id)
+    
+    video_title = 'ankitube_cards'
+    video = db.session.get(Video, video_id)
+    if video and video.title:
+        video_title = re.sub(r'\s+', '_', video.title)
+
+    if not cards:
+        cards = []
+
+    return render_template('output.html', cards=cards, video_title=video_title)
+
 
 @app.route('/api/anki/update_card', methods=['POST'])
 def handle_update_card():
@@ -424,8 +466,48 @@ def download_anki_csv():
             })
 
         csv_file = create_csv(csv_data)
-        filename_input = data.get('filename', '')
+        
+        # 1. セッションから現在の動画IDを取得
+        # current_video_id = session.get('current_video_id')
+        # print(f"[DEBUG 1] セッションから取れた動画ID: {current_video_id}")
+
+        # video_title = ''
+        
+        # if current_video_id:
+        #     # 2. DBから対象の動画情報を検索
+        #     video = db.session.get(Video, current_video_id)
+        #     print(f"[DEBUG 2] DBから動画が取得できたか: {video is not None}")
+        #     if video:
+        #         print(f"[DEBUG 3] DBに保存されている動画タイトル: {video.title}")
+        #         video_title = video.title
+
+        # # 3. フロントから送られてきたfilenameがなければ、動画タイトル（それもなければデフォルト値）を使う
+        # filename_input = data.get('filename')
+        # print(f"[DEBUG 4] フロント(JS)から届いたfilename: '{filename_input}'")
+
+        # if not filename_input:  # None または '' の場合
+        #     filename_input = video_title
+        #     print(f"[DEBUG 5] フロントが空だったので動画タイトルを採用: '{filename_input}'")
+
+        # filename = sanitize_filename(filename_input) if filename_input else 'ankitube_cards'
+        # print(f"[DEBUG 6] サニタイズ後の最終ファイル名: '{filename}'")
+
+        # === 【ここからファイル名決定ロジック】 ===
+        # フロント（JS）から届いたファイル名を取得
+        filename_input = data.get('filename', '').strip()
+
+        # もしフロントから届いた名前が空、あるいはデフォルト値のままだった場合の保険として
+        # セッションから動画タイトルを取得して補完する
+        if not filename_input or filename_input == 'ankitube_cards':
+            current_video_id = session.get('current_video_id')
+            if current_video_id:
+                video = db.session.get(Video, current_video_id)
+                if video and video.title:
+                    filename_input = video.title
+
+        # ファイル名のサニタイズ（禁止文字の除去）。それでも空なら最終フォールバック
         filename = sanitize_filename(filename_input) if filename_input else 'ankitube_cards'
+        # === 【ここまで】 ===
 
         # ブラウザに対して「これをファイルとして手元に保存してね！」と直接ダウンロードさせる
         return send_file(
@@ -438,9 +520,10 @@ def download_anki_csv():
     except Exception as e:
         print(f"CSVダウンロード中にエラーが発生しました: {str(e)}")
         return jsonify({'error': 'CSVの生成・ダウンロードに失敗しました'}), 500
+    
 
 # =====================
 # 実行
 # =====================
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)

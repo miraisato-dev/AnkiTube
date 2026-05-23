@@ -78,14 +78,14 @@
 </div>
 
 <!-- ファイル名入力 -->
-<div id="filename-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-margin-mobile">
+<div id="filename-modal"
+    class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-margin-mobile">
     <div class="bg-surface rounded-xl border border-outline-variant p-lg w-full max-w-sm shadow-xl">
         <h3 class="font-headline-sm text-headline-sm text-on-surface mb-md">ファイル名を入力</h3>
 
         <label class="font-label-lg text-label-lg text-on-surface-variant block mb-xs">File name</label>
         <div class="flex items-center border border-outline rounded-lg overflow-hidden">
-            <input id="modal-filename" type="text"
-                value="{{ video_title | default('ankitube_cards') }}"
+            <input id="modal-filename" type="text" value="{{ video_title | default('ankitube_cards') }}"
                 class="flex-1 bg-surface px-sm py-2 font-body-md text-body-md text-on-surface outline-none" />
             <span class="px-sm py-2 font-body-md text-on-surface-variant border-l border-outline">.csv</span>
         </div>
@@ -108,9 +108,9 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-    // =================
-    // モーダル表示
-    // =================
+        // =================
+        // モーダル表示
+        // =================
         document.getElementById('download-csv-btn')?.addEventListener('click', () => {
             document.getElementById('filename-modal').classList.remove('hidden');
         });
@@ -120,9 +120,9 @@
         });
 
 
-    // =======================================================
-    // CSVダウンロード処理
-    // =======================================================
+        // =======================================================
+        // CSVダウンロード処理
+        // =======================================================
         document.getElementById('modal-download-btn')?.addEventListener('click', async function () {
             const filename = document.getElementById('modal-filename').value.trim() || 'ankitube_cards';
             document.getElementById('filename-modal').classList.add('hidden');
@@ -140,7 +140,10 @@
                 const response = await fetch('/api/anki/download_csv', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ subtitle_ids: subtitleIds })
+                    body: JSON.stringify({
+                        subtitle_ids: subtitleIds,
+                        filename: filename
+                    })
                 });
 
                 if (!response.ok) {

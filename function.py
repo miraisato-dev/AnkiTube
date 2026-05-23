@@ -13,7 +13,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from youtube_transcript_api import YouTubeTranscriptApi
 from dotenv import load_dotenv
-import google.generativeai as genai
+from google import genai
 
 from models import Video, Subtitle, SubtitleAnalyses, AICard
 
@@ -25,8 +25,7 @@ API_KEY = os.getenv("YOUTUBE_DATA_API_KEY")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 MODEL_NAME = 'gemini-3.1-flash-lite'
 
-genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel(MODEL_NAME)
+client = genai.Client(api_key=GOOGLE_API_KEY)
 
 # ==========================================================
 # 補助関数：YouTube自動字幕特有の[Music]などのノイズを安全に消去
@@ -353,10 +352,13 @@ def analyze_subtitles_with_gemini(subtitles_json_data):
 
         try:
             # generation_config で JSON 出力を絶対強制（MIMEタイプ指定）
-            response = model.generate_content(
-                final_prompt,
-                generation_config={"response_mime_type": "application/json"}
+            response = client.models.generate_content(
+                model=MODEL_NAME,
+                contents=final_prompt,
+                config={"response_mime_type": "application/json"}
             )
+            print("--- [DEBUG] Geminiから生データが返ってきました ---")
+            # print(response.text)
 
             # APIの強制JSONモードのおかげで、100%安全にjson.loadsが通ります
             chunk_results = json.loads(response.text.strip())
@@ -411,8 +413,6 @@ def save_importance_analysis(subtitles_from_db, analysis_results):
     from app import db
 
     print("--- Starting save_importance_analysis (SEQUENCE MATCHING MODEL) ---")
-
-    MODEL_NAME = "gemini-3.1-flash-lite"
 
     # もし分析結果自体が空なら早期リターン
     if not analysis_results:
@@ -594,16 +594,16 @@ def generate_anki_cards(analysis_data_list):
     """
 
     try:
-        model = genai.GenerativeModel(MODEL_NAME)
-        
         # JSONとして確実に受け取るための設定
-        response = model.generate_content(
-            prompt,
-            generation_config={
+        
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=prompt,
+            config={
                 "response_mime_type": "application/json",
-                "max_output_tokens": 8192,  # 途中でブツ切れにならない
+                "max_output_tokens": 8192,
                 "temperature": 0.3
-                }
+            }
         )
         
         # 文字列として戻ってきたJSONをPythonのList[dict]に変換 Jinjaループを楽にする
