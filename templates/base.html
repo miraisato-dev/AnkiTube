@@ -167,16 +167,6 @@
                     Home
                 </a>
 
-                <!-- history -->
-                <a class="transition-colors font-label-lg text-label-lg px-2 py-1 
-                {% if request.endpoint == 'history' %}
-                    text-primary dark:text-inverse-primary border-b-2 border-primary
-                {% else %}
-                    text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-tertiary-fixed
-                {% endif %}" href="{{ url_for('history') if request.endpoint != 'history' else '#' }}">
-                    History
-                </a>
-
                 <!-- セッションに動画IDがある時だけ、Editorを表示する -->
                 {% if session.get('current_video_id') %}
                 <a class="transition-colors font-label-lg text-label-lg px-2 py-1 
@@ -191,6 +181,7 @@
                 {% endif %}
 
                 <!-- output -->
+                {% if session.get('current_video_id') %}
                 <a class="transition-colors font-label-lg text-label-lg px-2 py-1 
                 {% if request.endpoint == 'output' %}
                     text-primary dark:text-inverse-primary border-b-2 border-primary
@@ -198,6 +189,17 @@
                     text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-tertiary-fixed
                 {% endif %}" href="{{ url_for('output') if request.endpoint != 'output' else '#' }}">
                     Output
+                </a>
+                {% endif %}
+
+                <!-- history -->
+                <a class="transition-colors font-label-lg text-label-lg px-2 py-1 
+                {% if request.endpoint == 'history' %}
+                    text-primary dark:text-inverse-primary border-b-2 border-primary
+                {% else %}
+                    text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-tertiary-fixed
+                {% endif %}" href="{{ url_for('history') if request.endpoint != 'history' else '#' }}">
+                    History
                 </a>
 
             </nav>
@@ -236,20 +238,6 @@
             <span class="font-label-md text-label-md">Home</span>
         </a>
 
-        <!-- History -->
-        <a class="flex flex-col items-center justify-center px-4 py-1 active:scale-95 duration-200 transition-all 
-        {% if request.endpoint == 'history' %}
-            bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-full
-        {% else %}
-            text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant dark:hover:bg-inverse-surface
-        {% endif %}" href="{{ url_for('history') if request.endpoint != 'history' else '#' }}">
-
-            <span class="material-symbols-outlined" data-icon="history">
-                history
-            </span>
-            <span class="font-label-md text-label-md">History</span>
-        </a>
-
         <!-- editor -->
         {% if session.get('current_video_id') %}
         <a class="flex flex-col items-center justify-center px-4 py-1 active:scale-95 duration-200 transition-all 
@@ -268,6 +256,7 @@
         {% endif %}
 
         <!-- output -->
+        {% if session.get('current_video_id') %}
         <a class="flex flex-col items-center justify-center px-4 py-1 active:scale-95 duration-200 transition-all 
         {% if request.endpoint == 'output' %}
             bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-full
@@ -279,6 +268,21 @@
                 auto_awesome
             </span>
             <span class="font-label-md text-label-md">Output</span>
+        </a>
+        {% endif %}
+
+        <!-- History -->
+        <a class="flex flex-col items-center justify-center px-4 py-1 active:scale-95 duration-200 transition-all 
+        {% if request.endpoint == 'history' %}
+            bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-full
+        {% else %}
+            text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant dark:hover:bg-inverse-surface
+        {% endif %}" href="{{ url_for('history') if request.endpoint != 'history' else '#' }}">
+
+            <span class="material-symbols-outlined" data-icon="history">
+                history
+            </span>
+            <span class="font-label-md text-label-md">History</span>
         </a>
     </nav>
 

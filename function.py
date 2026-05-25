@@ -750,3 +750,10 @@ def create_csv(data) -> io.BytesIO:
     output.close()
     csv_bytes.seek(0)
     return csv_bytes
+
+
+# CSVファイル命名の際
+def sanitize_filename(title: str, max_length: int = 50) -> str:
+    sanitized = re.sub(r'[\\/*?:"<>|]', '', title)
+    sanitized = sanitized.replace(' ', '_')
+    return sanitized[:max_length] or 'ankitube_cards'

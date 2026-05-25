@@ -27,7 +27,8 @@ from function import (get_video_id,
                                 generate_anki_cards, 
                                 save_generated_cards, 
                                 get_generated_cards_from_db,
-                                create_csv
+                                create_csv,
+                                sanitize_filename
                                 )
 
 
@@ -83,6 +84,85 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 def home():
     return render_template('home.html')
 
+# ローディング画面(home → editor)
+@app.route('/loading/<video_id>')
+def loading(video_id):
+    return render_template('loading.html', video_id=video_id)
+
+# 編集ページ
+@app.route('/editor/<video_id>')
+def editor(video_id):
+    # 動画そのものの情報を取得
+    video = Video.query.get(video_id)
+    # 字幕データと、もしあればAIの分析結果を一緒に取得
+    # 字幕(Subtitle)を主軸に、その分析結果(analyses)を結合して取得する例
+    subtitles = Subtitle.query.filter_by(video_id=video_id).order_by(Subtitle.sequence).all()
+
+    # 直接URLを叩いて入った時のために、ここでもセッションを更新しておく
+    session['current_video_id'] = video_id
+    
+    # テンプレートに渡す
+    return render_template('editor.html', video=video, subtitles=subtitles, video_id=video_id)
+
+@app.route('/output')
+def output():
+    try:
+        # セッションから「今処理している動画ID」を取り出す
+        current_video_id = session.get('current_video_id')
+        
+        # 1. データベースから生成されたカードを直接すべて取得
+        cards = get_generated_cards_from_db(video_id=current_video_id)
+        
+        # これでターミナル（黒い画面）に何件取得できたか表示されます
+        print(f"==================================================")
+        print(f"★ [CRITICAL DEBUG] /output画面で読み込んだカード数: {len(cards)}件")
+        print(f"==================================================")
+
+        video_title = 'ankitube_cards'
+        if current_video_id:
+            video = db.session.get(Video, current_video_id)
+            if video and video.title:
+                video_title = re.sub(r'\s+', '_', video.title)
+
+        # データベースが本当に空だった場合だけのセーフティ
+        if not cards:
+            print("[WARNING] AICardテーブルが空です。セーフティデータを表示します。")
+            cards = [
+                {
+                    "id": 0,
+                    "subtitle_id": 0,
+                    "expression": "This is a [conspicuously] placed example question.",
+                    "answer": "conspicuously",
+                    "pronunciation": "/kənˈspɪk.ju.əs.li/",
+                    "meaning": "目立って、際立って",
+                    "synonyms": "noticeably, outstandingly",
+                    "note": "In a way that is clearly visible or attracts attention."
+                }
+            ]
+
+    except Exception as e:
+        print(f"[ERROR in /output route]: {e}")
+        cards = []
+
+    # 3. HTMLマクロ側にそのまま引き渡し
+    return render_template('output.html', cards=cards, video_title=video_title)
+
+@app.route('/output/<video_id>')
+def output_by_id(video_id):
+    # use video_id from URL instead of session
+    cards = get_generated_cards_from_db(video_id=video_id)
+    
+    video_title = 'ankitube_cards'
+    video = db.session.get(Video, video_id)
+    if video and video.title:
+        video_title = re.sub(r'\s+', '_', video.title)
+
+    if not cards:
+        cards = []
+
+    return render_template('output.html', cards=cards, video_title=video_title)
+
+
 # 履歴ページ
 @app.route('/history')
 def history():
@@ -91,30 +171,15 @@ def history():
     ).order_by(Video.created_at.desc()).all()
     return render_template('history.html', videos=videos)
 
-@app.route('/api/video/delete', methods=['POST'])
-def delete_video():
-    try:
-        data = request.get_json()
-        video_id = data.get('video_id')
-        if not video_id:
-            return jsonify({'error': 'video_idが指定されていません'}), 400
-
-        conn = sqlite3.connect(os.path.join(base_dir, 'data.sqlite'))
-        conn.execute('DELETE FROM ai_cards WHERE subtitle_id IN (SELECT subtitle_id FROM subtitles WHERE video_id=?)', (video_id,))
-        conn.execute('DELETE FROM subtitle_analyses WHERE subtitle_id IN (SELECT subtitle_id FROM subtitles WHERE video_id=?)', (video_id,))
-        conn.execute('DELETE FROM subtitles WHERE video_id=?', (video_id,))
-        conn.execute('DELETE FROM videos WHERE video_id=?', (video_id,))
-        conn.commit()
-        conn.close()
-        return jsonify({'success': True})
-    except Exception as e:
-        print(f"動画削除中にエラー: {str(e)}")
-        return jsonify({'error': '削除に失敗しました'}), 500
-
-
-
 # ビデオごとの処理進捗を管理する辞書
 processing_progress = {}
+
+
+
+
+# ====================================================
+# APIエンドポイント(画面なし)
+# ====================================================
 
 # URLを受け取って処理を開始するルート
 @app.route('/get_subtitles', methods=['POST'])
@@ -198,62 +263,7 @@ def get_subtitles():
     Thread(target=process).start()
     return redirect(url_for('loading', video_id=video_id))
 
-
-
-
-    # # DBから既存の動画をチェック
-    # existing_video = Video.query.get(video_id)
-
-    # if not existing_video:
-    #     print(f"=== [DEBUG] 新規動画です。データを取得します (ID: {video_id}) ===")
-    #     # A. メタデータ取得
-    #     metadata = get_video_metadata(video_id)
-    #     # B. 字幕取得
-    #     fetched = fetch_subtitles(video_id)
-        
-    #     if metadata and fetched:
-    #         # C. 動画と字幕をDBに保存
-    #         save_metadata_and_subtitles(metadata, fetched)
-    # else:
-    #     print(f"=== [DEBUG] 既にDBに存在する動画です (ID: {video_id}) ===")
-
-    # # 【重要】既存動画であっても、AI分析データ(SubtitleAnalysis)が空っぽなら解析を実行する
-    # analysis_exists = db.session.query(SubtitleAnalyses).join(Subtitle).filter(Subtitle.video_id == video_id).first()
-
-    # if not analysis_exists:
-    #     print("=== [DEBUG] AI分析データ未作成のため、Gemini解析を開始します ===")
-        
-    #     # 字幕データをDBから取得してAI用のJSONを作る
-    #     subtitles_from_db = Subtitle.query.filter_by(video_id=video_id).order_by(Subtitle.sequence).all()
-    #     subtitles_data_for_ai = json.dumps([
-    #         {"sequence": s.sequence, "text": s.raw_text} for s in subtitles_from_db
-    #     ], ensure_ascii=False)
-
-    #     # 2.5-flash で解析
-    #     analysis_package = analyze_subtitles_with_gemini(subtitles_data_for_ai)
-        
-    #     if analysis_package:
-    #         # 難易度(difficulty_level)をVideoテーブルに保存
-    #         video = Video.query.get(video_id)
-    #         if video:
-    #             video.difficulty_level = analysis_package.get("difficulty_level")
-    #             db.session.commit()
-            
-    #         # 最新の save_importance_analysis(video_id, analysis_results) の形に合わせて呼び出す
-    #         save_importance_analysis(subtitles_from_db, analysis_package)
-    #     else:
-    #         print("=== [ERROR] Geminiからの応答が空、またはパースに失敗しました ===")
-    # else:
-    #     print("=== [DEBUG] AI分析データは既に存在するため解析をスキップします ===")
-
-    # # 4. 全て終わったらEditor画面へリダイレクト
-    # return redirect(url_for('editor', video_id=video_id))
-
-
-@app.route('/loading/<video_id>')
-def loading(video_id):
-    return render_template('loading.html', video_id=video_id)
-
+# 処理進捗をJSON返却
 @app.route('/api/status/<video_id>')
 def check_status(video_id):
     progress = processing_progress.get(video_id, {
@@ -261,26 +271,7 @@ def check_status(video_id):
     })
     return jsonify(progress)
 
-
-# 編集ページ
-@app.route('/editor/<video_id>')
-def editor(video_id):
-    # 動画そのものの情報を取得
-    video = Video.query.get(video_id)
-    # 字幕データと、もしあればAIの分析結果を一緒に取得
-    # 字幕(Subtitle)を主軸に、その分析結果(analyses)を結合して取得する例
-    subtitles = Subtitle.query.filter_by(video_id=video_id).order_by(Subtitle.sequence).all()
-
-    # 直接URLを叩いて入った時のために、ここでもセッションを更新しておく
-    session['current_video_id'] = video_id
-    
-    # テンプレートに渡す
-    return render_template('editor.html', video=video, subtitles=subtitles, video_id=video_id)
-
-
-# ====================================================
-# ユーザー選択: 字幕の選択状態を更新するAPIエンドポイント
-# ====================================================
+# ユーザー選択: 字幕の選択チェックボックス状態をDB更新
 @app.route('/api/subtitle/update_status', methods=['POST'])
 def handle_update_status():
     data = request.get_json()
@@ -306,6 +297,7 @@ def handle_update_status():
         # DBエラーのエラーハンドリング
         return jsonify({'result': 'Error', 'message': 'データベースエラーが発生しました'}), 500
 
+# Geminiでカード生成・DB保存
 @app.route('/api/anki/generate', methods=['POST'])
 def generate_anki_cards_api():
     try:
@@ -363,66 +355,7 @@ def generate_anki_cards_api():
         print(f"Anki生成エンドポイントで予期せぬエラー: {str(e)}")
         return jsonify({'error': 'サーバー内部でエラーが発生しました'}), 500
 
-
-@app.route('/output')
-def output():
-    try:
-        # セッションから「今処理している動画ID」を取り出す
-        current_video_id = session.get('current_video_id')
-        
-        # 1. データベースから生成されたカードを直接すべて取得
-        cards = get_generated_cards_from_db(video_id=current_video_id)
-        
-        # これでターミナル（黒い画面）に何件取得できたか表示されます
-        print(f"==================================================")
-        print(f"★ [CRITICAL DEBUG] /output画面で読み込んだカード数: {len(cards)}件")
-        print(f"==================================================")
-
-        video_title = 'ankitube_cards'
-        if current_video_id:
-            video = db.session.get(Video, current_video_id)
-            if video and video.title:
-                video_title = re.sub(r'\s+', '_', video.title)
-
-        # データベースが本当に空だった場合だけのセーフティ
-        if not cards:
-            print("[WARNING] AICardテーブルが空です。セーフティデータを表示します。")
-            cards = [
-                {
-                    "id": 0,
-                    "subtitle_id": 0,
-                    "expression": "This is a [conspicuously] placed example question.",
-                    "answer": "conspicuously",
-                    "pronunciation": "/kənˈspɪk.ju.əs.li/",
-                    "meaning": "目立って、際立って",
-                    "synonyms": "noticeably, outstandingly",
-                    "note": "In a way that is clearly visible or attracts attention."
-                }
-            ]
-
-    except Exception as e:
-        print(f"[ERROR in /output route]: {e}")
-        cards = []
-
-    # 3. HTMLマクロ側にそのまま引き渡し
-    return render_template('output.html', cards=cards, video_title=video_title)
-
-@app.route('/output/<video_id>')
-def output_by_id(video_id):
-    # use video_id from URL instead of session
-    cards = get_generated_cards_from_db(video_id=video_id)
-    
-    video_title = 'ankitube_cards'
-    video = db.session.get(Video, video_id)
-    if video and video.title:
-        video_title = re.sub(r'\s+', '_', video.title)
-
-    if not cards:
-        cards = []
-
-    return render_template('output.html', cards=cards, video_title=video_title)
-
-
+# カード編集内容をDB保存
 @app.route('/api/anki/update_card', methods=['POST'])
 def handle_update_card():
     """フロントから個別に届いたカードの編集内容（表現、意味、正解など）を処理する窓口"""
@@ -487,7 +420,7 @@ def handle_update_card():
         print(f"[ERROR] データベースの一括更新に失敗: {str(e)}")
         return jsonify({'result': 'Error', 'message': f'データベースの更新に失敗しました: {str(e)}'}), 500
 
-
+# カード削除・is_selectedリセット
 @app.route('/api/anki/delete_card', methods=['POST'])
 def delete_anki_card():
     try:
@@ -515,12 +448,7 @@ def delete_anki_card():
         print(f"カード削除中にエラー: {str(e)}")
         return jsonify({'error': '削除に失敗しました'}), 500
 
-
-def sanitize_filename(title: str, max_length: int = 50) -> str:
-    sanitized = re.sub(r'[\\/*?:"<>|]', '', title)
-    sanitized = sanitized.replace(' ', '_')
-    return sanitized[:max_length] or 'ankitube_cards'
-
+# CSVファイル生成・ダウンロード
 @app.route('/api/anki/download_csv', methods=['POST'])
 def download_anki_csv():
     """
@@ -534,7 +462,7 @@ def download_anki_csv():
         if not subtitle_ids:
             return jsonify({'error': '対象のカードが選択されていません'}), 400
 
-        #【ここがポイント！】画面で編集され、リアルタイムに保存された「最新の状態」をDBからガッと取得（SELECT）
+        #画面で編集され、リアルタイムに保存された「最新の状態」をDBから取得（SELECT）
         cards_from_db = (
             db.session.query(AICard)
             .filter(AICard.subtitle_id.in_(subtitle_ids))
@@ -558,33 +486,8 @@ def download_anki_csv():
             })
 
         csv_file = create_csv(csv_data)
-        
-        # 1. セッションから現在の動画IDを取得
-        # current_video_id = session.get('current_video_id')
-        # print(f"[DEBUG 1] セッションから取れた動画ID: {current_video_id}")
 
-        # video_title = ''
-        
-        # if current_video_id:
-        #     # 2. DBから対象の動画情報を検索
-        #     video = db.session.get(Video, current_video_id)
-        #     print(f"[DEBUG 2] DBから動画が取得できたか: {video is not None}")
-        #     if video:
-        #         print(f"[DEBUG 3] DBに保存されている動画タイトル: {video.title}")
-        #         video_title = video.title
-
-        # # 3. フロントから送られてきたfilenameがなければ、動画タイトル（それもなければデフォルト値）を使う
-        # filename_input = data.get('filename')
-        # print(f"[DEBUG 4] フロント(JS)から届いたfilename: '{filename_input}'")
-
-        # if not filename_input:  # None または '' の場合
-        #     filename_input = video_title
-        #     print(f"[DEBUG 5] フロントが空だったので動画タイトルを採用: '{filename_input}'")
-
-        # filename = sanitize_filename(filename_input) if filename_input else 'ankitube_cards'
-        # print(f"[DEBUG 6] サニタイズ後の最終ファイル名: '{filename}'")
-
-        # === 【ここからファイル名決定ロジック】 ===
+        # === ファイル名決定  ===
         # フロント（JS）から届いたファイル名を取得
         filename_input = data.get('filename', '').strip()
 
@@ -613,6 +516,26 @@ def download_anki_csv():
         print(f"CSVダウンロード中にエラーが発生しました: {str(e)}")
         return jsonify({'error': 'CSVの生成・ダウンロードに失敗しました'}), 500
     
+# 動画・関連データ全削除
+@app.route('/api/video/delete', methods=['POST'])
+def delete_video():
+    try:
+        data = request.get_json()
+        video_id = data.get('video_id')
+        if not video_id:
+            return jsonify({'error': 'video_idが指定されていません'}), 400
+
+        conn = sqlite3.connect(os.path.join(base_dir, 'data.sqlite'))
+        conn.execute('DELETE FROM ai_cards WHERE subtitle_id IN (SELECT subtitle_id FROM subtitles WHERE video_id=?)', (video_id,))
+        conn.execute('DELETE FROM subtitle_analyses WHERE subtitle_id IN (SELECT subtitle_id FROM subtitles WHERE video_id=?)', (video_id,))
+        conn.execute('DELETE FROM subtitles WHERE video_id=?', (video_id,))
+        conn.execute('DELETE FROM videos WHERE video_id=?', (video_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"動画削除中にエラー: {str(e)}")
+        return jsonify({'error': '削除に失敗しました'}), 500
 
 # =====================
 # 実行
