@@ -175,8 +175,6 @@ def history():
 processing_progress = {}
 
 
-
-
 # ====================================================
 # APIエンドポイント(画面なし)
 # ====================================================
@@ -207,6 +205,12 @@ def get_subtitles():
                 if not existing_video:
                     metadata = get_video_metadata(video_id)
                     fetched = fetch_subtitles(video_id)
+
+                    if not fetched:
+                        # Flash a user-friendly message and redirect home
+                        from flask import flash
+                        flash("この動画の字幕を取得できませんでした。字幕がない動画か、現在サーバーがYouTubeにブロックされています。", "error")
+                        return redirect(url_for('home'))
                     
                     if metadata and fetched:
                         # ステップ2: DB保存
@@ -225,6 +229,11 @@ def get_subtitles():
                     processing_progress[video_id] = {'percent': 20, 'message': 'AIが分析を開始します...', 'done': False}
 
                     subtitles_from_db = Subtitle.query.filter_by(video_id=video_id).order_by(Subtitle.sequence).all()
+                    
+                    if not subtitles_from_db:  # ← ADD THIS
+                        flash("字幕データが見つかりません。", "error")
+                        return redirect(url_for('home'))
+                    
                     subtitles_data_for_ai = json.dumps([
                         {"sequence": s.sequence, "text": s.raw_text} for s in subtitles_from_db
                     ], ensure_ascii=False)
