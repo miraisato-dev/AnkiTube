@@ -5,16 +5,21 @@ import re
 import json
 import sqlite3
 
-from flask import Flask, render_template, url_for, request, redirect, session, send_file, jsonify
+from flask import Flask, render_template, url_for, request, redirect, session, send_file, jsonify, flash
 from flask_migrate import Migrate
+
+from flask_login import login_user, logout_user, login_required, current_user
+
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import SQLAlchemyError
 
+from authlib.integrations.flask_client import OAuth
+
 from filters import format_time
-from models import Video, Subtitle, SubtitleAnalyses, AICard
+from models import User, Video, Subtitle, SubtitleAnalyses, AICard
 
 from function import (get_video_id, 
                                 get_video_metadata, 
@@ -54,19 +59,38 @@ database = 'sqlite:///' + os.path.join(base_dir, 'data.sqlite')
 app.config['SQLALCHEMY_DATABASE_URI'] = database
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-
+# Google OAuth設定
+app.config['GOOGLE_CLIENT_ID'] = os.environ.get('GOOGLE_CLIENT_ID')
+app.config['GOOGLE_CLIENT_SECRET'] = os.environ.get('GOOGLE_CLIENT_SECRET')
 
 # ==================================================
 # DB・Migrate設計
 # ==================================================
 # こうすることによりapp.pyとmodels.pyの循環を避ける
-from extensions import db
+from extensions import db, login_manager
 db.init_app(app)
 
 import models
 
 # migrateを紐づける: これでflask dbコマンドが使えるようになる(Migrationができる)
 migrate = Migrate(app, db)
+
+# Flask-Login設定
+login_manager.init_app(app)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return db.session.get(User, int(user_id))
+
+# OAuth設定
+oauth = OAuth(app)
+google = oauth.register(
+    name='google',
+    client_id=app.config['GOOGLE_CLIENT_ID'],
+    client_secret=app.config['GOOGLE_CLIENT_SECRET'],
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'}
+)
 
 # SQLiteでForeignKeyを有効化
 @event.listens_for(Engine, "connect")
@@ -76,21 +100,73 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
 
+
+# ==================================================
+# 認証ルーティング
+# ==================================================
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
+@app.route('/auth/google')
+def auth_google():
+    redirect_uri = url_for('auth_callback', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@app.route('/auth/callback')
+def auth_callback():
+    try:
+        token = google.authorize_access_token()
+        user_info = token.get('userinfo')
+
+        if not user_info:
+            flash('Googleログインに失敗しました。', 'error')
+            return redirect(url_for('login'))
+
+        # DBからユーザーを検索、なければ新規作成
+        user = User.query.filter_by(google_id=user_info['sub']).first()
+        if not user:
+            user = User(
+                google_id=user_info['sub'],
+                email=user_info['email'],
+                name=user_info.get('name'),
+                avatar=user_info.get('picture')
+            )
+            db.session.add(user)
+            db.session.commit()
+
+        login_user(user)
+        return redirect(url_for('home'))
+
+    except Exception as e:
+        print(f"[ERROR] OAuth callback error: {e}")
+        flash('ログインに失敗しました。もう一度お試しください。', 'error')
+        return redirect(url_for('login'))
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
 # ==================================================
 # ルーティング
 # ==================================================
 # トップページ
 @app.route('/')
+@login_required
 def home():
     return render_template('home.html')
 
 # ローディング画面(home → editor)
 @app.route('/loading/<video_id>')
+@login_required
 def loading(video_id):
     return render_template('loading.html', video_id=video_id)
 
 # 編集ページ
 @app.route('/editor/<video_id>')
+@login_required
 def editor(video_id):
     # 動画そのものの情報を取得
     video = Video.query.get(video_id)
@@ -105,6 +181,7 @@ def editor(video_id):
     return render_template('editor.html', video=video, subtitles=subtitles, video_id=video_id)
 
 @app.route('/output')
+@login_required
 def output():
     try:
         # セッションから「今処理している動画ID」を取り出す
@@ -148,6 +225,7 @@ def output():
     return render_template('output.html', cards=cards, video_title=video_title)
 
 @app.route('/output/<video_id>')
+@login_required
 def output_by_id(video_id):
     # use video_id from URL instead of session
     cards = get_generated_cards_from_db(video_id=video_id)
@@ -165,10 +243,14 @@ def output_by_id(video_id):
 
 # 履歴ページ
 @app.route('/history')
+@login_required
 def history():
+    # 💡 .filter(Video.user_id == current_user.id) を追加して絞り込む
     videos = Video.query.options(
         joinedload(Video.subtitles).joinedload(Subtitle.ai_cards)
-    ).order_by(Video.created_at.desc()).all()
+    ).filter(Video.user_id == current_user.id)\
+    .order_by(Video.created_at.desc()).all()
+    
     return render_template('history.html', videos=videos)
 
 # ビデオごとの処理進捗を管理する辞書
@@ -181,19 +263,25 @@ processing_progress = {}
 
 # URLを受け取って処理を開始するルート
 @app.route('/get_subtitles', methods=['POST'])
+@login_required
 def get_subtitles():
     # 1. フォームからURLを取得してIDを抜く
     url = request.form.get('youtube_url')
     # 2. function.py の職人に ID抽出を頼む
     video_id = get_video_id(url)
+    
     if not video_id:
-        return "URLが正しくありません", 400
+        flash("URLが正しくありません。もう一度確認してください。", "error")
+        return redirect(url_for('home')) # ホームに戻す
     
     # 3. セッションに「今編集中のID」を保存
     session['current_video_id'] = video_id
 
     # 進捗を初期化
     processing_progress[video_id] = {'percent': 0, 'message': '準備中...', 'done': False}
+
+    #  ログインしているユーザーのIDを確保しておく
+    user_id = current_user.id
 
     def process():
         with app.app_context():
@@ -204,13 +292,18 @@ def get_subtitles():
                 existing_video = Video.query.get(video_id)
                 if not existing_video:
                     metadata = get_video_metadata(video_id)
+                    metadata['user_id'] = user_id
+
                     fetched = fetch_subtitles(video_id)
 
                     if not fetched:
-                        # Flash a user-friendly message and redirect home
-                        from flask import flash
-                        flash("この動画の字幕を取得できませんでした。字幕がない動画か、現在サーバーがYouTubeにブロックされています。", "error")
-                        return redirect(url_for('home'))
+                        processing_progress[video_id] = {
+                            'percent': 0,
+                            'message': '字幕を取得できませんでした',
+                            'done': True,
+                            'error': True
+                        }
+                        return
                     
                     if metadata and fetched:
                         # ステップ2: DB保存
@@ -219,7 +312,6 @@ def get_subtitles():
 
                 else:
                     print(f"=== [DEBUG] 既にDBに存在する動画です (ID: {video_id}) ===")
-
                 
                 # ステップ2: AI分析
                 analysis_exists = db.session.query(SubtitleAnalyses).join(Subtitle).filter(Subtitle.video_id == video_id).first()
@@ -230,9 +322,14 @@ def get_subtitles():
 
                     subtitles_from_db = Subtitle.query.filter_by(video_id=video_id).order_by(Subtitle.sequence).all()
                     
-                    if not subtitles_from_db:  # ← ADD THIS
-                        flash("字幕データが見つかりません。", "error")
-                        return redirect(url_for('home'))
+                    if not subtitles_from_db:
+                        processing_progress[video_id] = {
+                            'percent': 0,
+                            'message': '字幕データが見つかりません',
+                            'done': True,
+                            'error': True
+                        }
+                        return 
                     
                     subtitles_data_for_ai = json.dumps([
                         {"sequence": s.sequence, "text": s.raw_text} for s in subtitles_from_db
@@ -282,6 +379,7 @@ def check_status(video_id):
 
 # ユーザー選択: 字幕の選択チェックボックス状態をDB更新
 @app.route('/api/subtitle/update_status', methods=['POST'])
+@login_required
 def handle_update_status():
     data = request.get_json()
     
@@ -308,6 +406,7 @@ def handle_update_status():
 
 # Geminiでカード生成・DB保存
 @app.route('/api/anki/generate', methods=['POST'])
+@login_required
 def generate_anki_cards_api():
     try:
         data = request.get_json()
@@ -366,6 +465,7 @@ def generate_anki_cards_api():
 
 # カード編集内容をDB保存
 @app.route('/api/anki/update_card', methods=['POST'])
+@login_required
 def handle_update_card():
     """フロントから個別に届いたカードの編集内容（表現、意味、正解など）を処理する窓口"""
     data = request.get_json()
@@ -431,6 +531,7 @@ def handle_update_card():
 
 # カード削除・is_selectedリセット
 @app.route('/api/anki/delete_card', methods=['POST'])
+@login_required
 def delete_anki_card():
     try:
         data = request.get_json()
@@ -459,6 +560,7 @@ def delete_anki_card():
 
 # CSVファイル生成・ダウンロード
 @app.route('/api/anki/download_csv', methods=['POST'])
+@login_required
 def download_anki_csv():
     """
     ダウンロードボタンが押されたら、DBから最新データを引っ張ってきて
@@ -527,6 +629,7 @@ def download_anki_csv():
     
 # 動画・関連データ全削除
 @app.route('/api/video/delete', methods=['POST'])
+@login_required
 def delete_video():
     try:
         data = request.get_json()

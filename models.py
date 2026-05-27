@@ -8,6 +8,7 @@ from extensions import db
 # ==================================================
 # テーブル名を定数（変数）として一括定義
 # ==================================================
+TABLE_USERS = 'users'
 TABLE_VIDEOS = 'videos'
 TABLE_SUBTITLES = 'subtitles'
 TABLE_SUBTITLE_ANALYSES = 'subtitle_analyses'
@@ -16,22 +17,55 @@ TABLE_AI_CARDS = 'ai_cards'
 #==================================================
 # モデル
 #==================================================
+
+# ユーザーテーブル
+class User(db.Model):
+    __tablename__ = TABLE_USERS
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    google_id = Column(String(100), unique=True, nullable=False)
+    email = Column(String(200), unique=True, nullable=False)
+    name = Column(String(200), nullable=True)
+    avatar = Column(String(500), nullable=True)  # Google profile picture URL
+    created_at = Column(DateTime, server_default=func.now())
+
+    # リレーション
+    videos = db.relationship('Video', backref='user', lazy=True)
+
+    # Flask-Login が必要とする4つのプロパティ
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_active(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return str(self.id)
+    
+
 # 動画テーブル
 class Video(db.Model): # app.pyのdbを継承
     # テーブル名
     __tablename__ = TABLE_VIDEOS
-    
+
     # 11桁のID
     video_id = Column(String(20), primary_key=True)
     # videoのtitle
     title = Column(String(200), nullable=False)
     channel_name = Column(String(100))
-
     difficulty_level = db.Column(db.String(5))  # "A2", "B1" など
     summary = db.Column(db.Text)
-
     duration = db.Column(db.String(20), nullable=True)
     
+    # ユーザーとのrelation
+    user_id = Column(Integer, ForeignKey(f'{TABLE_USERS}.id', ondelete='CASCADE'), nullable=True)
+
     # current_timestampより書きやすいのでfunc.now()を選んだ
     created_at = Column(DateTime, 
                         server_default=func.now(), 

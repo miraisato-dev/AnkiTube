@@ -25,6 +25,15 @@
             YouTube動画からワンクリックでAnkiカードを作成。
             グローバルに活躍するための、語学学習ツール。
         </p>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-danger" style="color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 12px; border-radius: 4px; margin-bottom: 20px;">
+                    ⚠️ {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
         <form action="{{ url_for('get_subtitles') }}" method="POST"
             class="w-full max-w-2xl bg-surface-container-lowest air-light-card rounded-xl p-2 flex flex-col md:flex-row gap-sm items-stretch border border-surface-container-high">
             <div class="flex-1 flex items-center px-4 gap-sm rounded-xl p-2 border border-surface-container-high">

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html class="light" lang="ja">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>ログイン - AnkiTube</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#d9dadc",
+                        "outline-variant": "#c3c6d6",
+                        "on-primary-container": "#c4d2ff",
+                        "on-surface-variant": "#434654",
+                        "primary-container": "#0052cc",
+                        "background": "#f8f9fb",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-low": "#f3f4f6",
+                        "error": "#ba1a1a",
+                        "secondary-container": "#feb700",
+                        "on-secondary": "#ffffff",
+                        "surface-container-high": "#e7e8ea",
+                        "primary-fixed": "#dae2ff",
+                        "surface": "#f8f9fb",
+                        "on-surface": "#191c1e",
+                        "on-primary": "#ffffff",
+                        "surface-container": "#edeef0",
+                        "primary": "#003d9b",
+                        "on-background": "#191c1e",
+                        "outline": "#737685",
+                    },
+                    "fontFamily": {
+                        "sans": ["Plus Jakarta Sans"],
+                    },
+                    "fontSize": {
+                        "headline-xl": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "fontWeight": "600" }],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-up { animation: fadeUp 0.5s ease forwards; }
+        .fade-up-delay-1 { animation: fadeUp 0.5s ease 0.1s forwards; opacity: 0; }
+        .fade-up-delay-2 { animation: fadeUp 0.5s ease 0.2s forwards; opacity: 0; }
+        .fade-up-delay-3 { animation: fadeUp 0.5s ease 0.35s forwards; opacity: 0; }
+
+        .google-btn {
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+        }
+        .google-btn:hover {
+            box-shadow: 0 4px 12px rgba(0, 61, 155, 0.18);
+            transform: translateY(-1px);
+        }
+        .google-btn:active {
+            transform: translateY(0px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+    </style>
+</head>
+
+<body class="bg-background text-on-surface min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="w-full px-6 md:px-16 h-16 flex items-center">
+        <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-primary">language</span>
+            <span class="text-headline-sm text-primary tracking-tight">AnkiTube</span>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main class="flex-1 flex items-center justify-center px-4 py-12">
+        <div class="w-full max-w-sm">
+
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="mb-4 px-4 py-3 rounded-lg text-body-sm
+                {% if category == 'error' %}
+                    bg-red-50 text-error border border-red-200
+                {% else %}
+                    bg-primary-fixed text-primary border border-outline-variant
+                {% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <!-- Card -->
+            <div class="bg-surface-container-lowest rounded-2xl p-8 shadow-sm border border-outline-variant">
+
+                <!-- Logo + Title -->
+                <div class="text-center mb-8 fade-up">
+                    <div class="w-14 h-14 rounded-2xl bg-primary-fixed flex items-center justify-center mx-auto mb-4">
+                        <span class="material-symbols-outlined text-primary text-3xl">language</span>
+                    </div>
+                    <h1 class="text-headline-md text-on-surface tracking-tight">ようこそ</h1>
+                    <p class="text-body-sm text-on-surface-variant mt-1">AnkiTube にログインしてください</p>
+                </div>
+
+                <!-- Divider with text -->
+                <div class="fade-up-delay-1">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="flex-1 h-px bg-outline-variant"></div>
+                        <span class="text-label-md text-outline">Googleアカウントで続ける</span>
+                        <div class="flex-1 h-px bg-outline-variant"></div>
+                    </div>
+
+                    <!-- Google Login Button -->
+                    <a href="{{ url_for('auth_google') }}"
+                        class="google-btn w-full flex items-center justify-center gap-3 bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 text-label-lg text-on-surface">
+                        <!-- Google SVG icon -->
+                        <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                            <path fill="none" d="M0 0h48v48H0z"/>
+                        </svg>
+                        Googleでログイン
+                    </a>
+                </div>
+
+                <!-- Footer note -->
+                <p class="fade-up-delay-2 text-label-md text-outline text-center mt-6">
+                    ログインすることで、利用規約とプライバシーポリシーに同意したことになります。
+                </p>
+            </div>
+
+            <!-- Bottom note -->
+            <p class="fade-up-delay-3 text-label-md text-outline text-center mt-6">
+                © 2026 Mirai Sato · AnkiTube
+            </p>
+
+        </div>
+    </main>
+
+</body>
+</html>

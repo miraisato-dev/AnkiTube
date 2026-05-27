@@ -204,11 +204,29 @@
 
             </nav>
 
-            <div
-                class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden cursor-pointer">
-                <img alt="User Avatar" class="w-full h-full object-cover"
-                    data-alt="A professional headshot avatar of a young male with short brown hair and a friendly smile, styled in a minimalist vector art fashion. The background is a soft blue that matches the primary brand colors of the educational platform. The lighting is clean and high-key, suitable for a sophisticated modern UI."
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDApIA4tXHZeBJuNaqsCjQQf66vOxNhRyGPMevaNyjucw2JRPG0ktgppa2QTuJvB_JVGqHldjnjulYgtR-BB96ZkVlaRwdKj_NfPDRiqmzfDQeD-30DOWzZ7_h-MB20StDGUMI26QWoaPFc0r_lmtgOMHGit48FR2L6noD0KwdWsFtc7nR_zNT7EgHZ3C6jOyGF0dtJLEm7UgISxkpyF1xp2zdS1u3VIBn2y5NpGoOVw8wZuSnUwk6n-jV4P8Bqry6e4vcii-vOLWE" />
+            <div class="relative" id="avatar-menu-container">
+                <button onclick="toggleAvatarMenu()"
+                    class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 ring-primary transition-all">
+                    {% if current_user.avatar %}
+                    <img alt="User Avatar" class="w-full h-full object-cover" src="{{ current_user.avatar }}" />
+                    {% else %}
+                    <span class="material-symbols-outlined text-on-surface-variant">person</span>
+                    {% endif %}
+                </button>
+
+                <!-- Dropdown -->
+                <div id="avatar-dropdown"
+                    class="hidden absolute right-0 mt-2 w-48 bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant z-50 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-outline-variant">
+                        <p class="text-body-sm font-semibold text-on-surface truncate">{{ current_user.name }}</p>
+                        <p class="text-label-md text-on-surface-variant truncate">{{ current_user.email }}</p>
+                    </div>
+                    <a href="{{ url_for('logout') }}"
+                        class="flex items-center gap-3 px-4 py-3 text-body-sm text-error hover:bg-error-container transition-colors">
+                        <span class="material-symbols-outlined text-error" style="font-size:18px">logout</span>
+                        ログアウト
+                    </a>
+                </div>
             </div>
         </div>
     </header>
@@ -333,7 +351,20 @@
         </div>
     </footer>
 
-    {% block scripts %}{% endblock %}
+    {% block scripts %}
+    <script>
+        function toggleAvatarMenu() {
+            document.getElementById('avatar-dropdown').classList.toggle('hidden');
+        }
+        // Close when clicking outside
+        document.addEventListener('click', function (e) {
+            const container = document.getElementById('avatar-menu-container');
+            if (container && !container.contains(e.target)) {
+                document.getElementById('avatar-dropdown').classList.add('hidden');
+            }
+        });
+    </script>
+    {% endblock %}
 </body>
 
 </html>

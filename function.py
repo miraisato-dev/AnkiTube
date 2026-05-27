@@ -12,13 +12,18 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.attributes import flag_modified
 
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.proxies import WebshareProxyConfig
 from dotenv import load_dotenv
 from google import genai
+from googleapiclient.discovery import build
 
 from models import Video, Subtitle, SubtitleAnalyses, AICard
 
 # .envファイルを読み込む
 load_dotenv()
+
+WEBSHARE_USER = os.getenv("WEBSHARE_PROXY_USERNAME")
+WEBSHARE_PASS = os.getenv("WEBSHARE_PROXY_PASSWORD")
 
 # .envファイル内の環境変数からAPIキーを取得
 API_KEY = os.getenv("YOUTUBE_DATA_API_KEY")
@@ -109,7 +114,15 @@ def get_video_metadata(video_id):
 def fetch_subtitles(video_id):
     """字幕データのみをYouTubeTranscriptAPIから取得"""
     try:
-        api = YouTubeTranscriptApi()
+        if WEBSHARE_USER and WEBSHARE_PASS:
+            proxy_config = WebshareProxyConfig(
+                proxy_username=WEBSHARE_USER,
+                proxy_password=WEBSHARE_PASS
+            )
+            api = YouTubeTranscriptApi(proxy_config=proxy_config)
+        else:
+            print("--- [WARNING] Webshare credentials not set, trying without proxy ---")
+            api = YouTubeTranscriptApi()
         # アメリカ英語(en-US)、イギリス英語(en-GB)なども網羅した言語リストを渡す
         fetched = api.fetch(
             video_id, 
@@ -204,7 +217,7 @@ def combine_subtitles_to_sentences(raw_subtitles):
     return combined_sentences
 
 
-def save_metadata_and_subtitles(metadata, fetched):
+def save_metadata_and_subtitles(metadata, fetched, user_id=None):
     """A.5 字幕と動画情報をDBに保存"""
     from app import db # 循環参照対策
 
@@ -226,7 +239,8 @@ def save_metadata_and_subtitles(metadata, fetched):
             title=metadata["title"],
             channel_name=metadata["channel_name"],
             summary=metadata.get("summary"),
-            duration=parse_duration(metadata.get("duration"))
+            duration=parse_duration(metadata.get("duration")),
+            user_id=metadata.get("user_id")
         )
 
         db.session.add(new_video)

@@ -1,5 +1,6 @@
 # extensions.py db = SQLAlchemy()の定義のみ
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager
 from sqlalchemy import MetaData
 
 
@@ -16,3 +17,7 @@ naming_convention = {
 # ルールを適用して dbインスタンスをメタデータ付きで作る
 db = SQLAlchemy(metadata=MetaData(naming_convention=naming_convention))
 # appとdbを紐づける
+
+login_manager = LoginManager()
+login_manager.login_view = 'login'  # ログインしていない場合にリダイレクトするページ
+login_manager.login_message = 'ログインしてください'
