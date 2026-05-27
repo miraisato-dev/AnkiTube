@@ -166,6 +166,7 @@
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script>
     // 1. プレイヤー変数を完全にグローバルに登録
     window.player = null;
